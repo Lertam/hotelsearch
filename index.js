@@ -35,7 +35,7 @@ $(document).ready(() => {
     function RoomSelect() {
         this.dialogInitialized = false;
         this.rooms = [{
-            adults: 1,
+            adults: 2,
             children: []
         }];
         this.getInfo = () => this.rooms;
@@ -128,7 +128,7 @@ $(document).ready(() => {
                 open_button = $('#rooms');
                 $('#dialog').dialog({
                     autoOpen: false,
-                    position: { my: "left top", at: "bottom", of: open_button},
+                    position: { my: "left top", at: "left bottom", of: open_button},
                     title: ''
                 });
                 $('.ui-dialog-titlebar').hide();
@@ -218,14 +218,13 @@ $(document).ready(() => {
                 }
                 
                 Promise.all(promises).then(() => {
-                    $('#hotels').append('<div id="hotels_filter" class="container-fluid" style="margin-bottom:20px">');
                     $('#hotels').append('<div class="row container-fluid" id="hotels_result">');
                     this.renderFilters();
                     this.renderHotels(); 
                 });
             });//TODO: Add error catching
         }
-        this.renderFilters = (selector = '#hotels_filter') => {
+        this.renderFilters = (selector = '#filters') => {
             let serps_output = '';
             if(this.serps.hotel.length > 0){
                 serps_output += '<label>В отеле</label><br />';
@@ -402,7 +401,6 @@ $(document).ready(() => {
                 if(this.filters.meals.indexOf(slug) == -1) this.filters.meals.push(slug);
                 else this.filters.meals.splice(this.filters.meals.indexOf(slug), 1);
                 this.renderHotels(this.filter);
-                console.log(this.filters);
             });
         }
         this.formatMoney = (amount, decimalCount = 2, decimal = ".", thousands = " ") => {
@@ -448,7 +446,6 @@ $(document).ready(() => {
                 if(passed == serps.length) filters_passed += 1;
             }
             if(meals.length > 0) {
-                console.log(meals, source.meals);
                 totalFilters += 1;
                 let passed = 0;
                 meals.map(meal => { if(source.meals.indexOf(meal) !== -1) passed += 1;});
@@ -568,7 +565,6 @@ $(document).ready(() => {
 
             $('#search').click(ev => {
                 if(this.validateForm()) {
-                    console.log('Searching', this.data);
                     this.getHotels();
                 }
             });
