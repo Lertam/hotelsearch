@@ -170,9 +170,11 @@ $(document).ready(() => {
             stars: [],
             prices: {min:0, max:100000},
             ratings: [],
-            serps: []
+            serps: [],
+            meals: []
         };
-        this.serps = [];
+        this.serps = {hotel:[], room:[], features:[]};
+        this.meals = [];
 
         this.getRegionIcon = type => {
             return type; //TODO: Release this function
@@ -225,27 +227,43 @@ $(document).ready(() => {
         }
         this.renderFilters = (selector = '#hotels_filter') => {
             let serps_output = '';
-            serps_output += '<label>В отеле</label><br />';
-            this.serps.hotel.map(serp => {
+            if(this.serps.hotel.length > 0){
+                serps_output += '<label>В отеле</label><br />';
+                this.serps.hotel.map(serp => {
                 serps_output += `<label for="${serp.slug}">
                     ${serp.title}
                     <input type="checkbox" id=${serp.slug} ${this.filters.serps.indexOf(serp.slug) !== -1 ? 'checked':''} />
                 </label>`;
-            });
-            serps_output += '<br /><label>В номере</label><br />';
-            this.serps.room.map(serp => {
-                serps_output += `<label for="${serp.slug}">
-                    ${serp.title}
-                    <input type="checkbox" id=${serp.slug} ${this.filters.serps.indexOf(serp.slug) !== -1 ? 'checked':''} />
-                </label>`;
-            });
-            serps_output += '<br /><label>Особенности размещения</label><br />';
-            this.serps.features.map(serp => {
-                serps_output += `<label for="${serp.slug}">
-                    ${serp.title}
-                    <input type="checkbox" id=${serp.slug} ${this.filters.serps.indexOf(serp.slug) !== -1 ? 'checked':''} />
-                </label>`;
-            })
+                });
+            }
+            if(this.serps.room.length > 0){
+                serps_output += '<br /><label>В номере</label><br />';
+                this.serps.room.map(serp => {
+                    serps_output += `<label for="${serp.slug}">
+                        ${serp.title}
+                        <input type="checkbox" id=${serp.slug} ${this.filters.serps.indexOf(serp.slug) !== -1 ? 'checked':''} />
+                    </label>`;
+                });
+            }
+            if(this.serps.features.length > 0){
+                serps_output += '<br /><label>Особенности размещения</label><br />';
+                this.serps.features.map(serp => {
+                    serps_output += `<label for="${serp.slug}">
+                        ${serp.title}
+                        <input type="checkbox" id=${serp.slug} ${this.filters.serps.indexOf(serp.slug) !== -1 ? 'checked':''} />
+                    </label>`;
+                });
+            }
+            let meals_output = '';
+            if(this.meals.length > 0) {
+                let allowed = ['nomeal', 'breakfast', 'half-board', 'full-board', 'all-inclusive'];
+                this.meals.filter(meal => allowed.indexOf(meal.slug) !== -1).map(meal =>
+                    meals_output += `<label for="${meal.slug}">
+                        ${meal.title}
+                        <input type="checkbox" id=${meal.slug} ${this.filters.meals.indexOf(meal.slug) !== -1 ? 'checked':''} />
+                    </label>`
+                );
+            }
             $(selector).html(`
                 <div class="row">
                     <div class="col-12">
@@ -327,6 +345,14 @@ $(document).ready(() => {
                         </fieldset>
                     </div>
                 </div>
+                <div class="row">
+                    <div class="col-12">
+                        <fieldset id="meals-filter">
+                            <legend style="font-size:1.2rem;">Питание</legend>
+                            ${meals_output}
+                        </fieldset>
+                    </div>
+                </div>
             `);
             $( "#price-range" ).slider({
                 range: true,
@@ -368,6 +394,16 @@ $(document).ready(() => {
                 else this.filters.serps.splice(this.filters.serps.indexOf(slug), 1);
                 this.renderHotels(this.filter);
             });
+            $(`#meals-filter input[type=\"checkbox\"]`).checkboxradio({
+                icon: false
+            });
+            $(`#meals-filter input`).click(({target}) => {
+                let slug = target.id;
+                if(this.filters.meals.indexOf(slug) == -1) this.filters.meals.push(slug);
+                else this.filters.meals.splice(this.filters.meals.indexOf(slug), 1);
+                this.renderHotels(this.filter);
+                console.log(this.filters);
+            });
         }
         this.formatMoney = (amount, decimalCount = 2, decimal = ".", thousands = " ") => {
             try {
@@ -394,7 +430,7 @@ $(document).ready(() => {
             return output;
         }
         this.filter = source => {
-            const { stars, prices, ratings, serps } = this.filters;
+            const { stars, prices, ratings, serps, meals } = this.filters;
             let filters_passed = 0;
             let totalFilters = 0;
             if(stars.length > 0) {
@@ -410,6 +446,13 @@ $(document).ready(() => {
                 let passed = 0;
                 serps.map(serp => { if(source.serps.indexOf(serp) !== -1) passed += 1;});
                 if(passed == serps.length) filters_passed += 1;
+            }
+            if(meals.length > 0) {
+                console.log(meals, source.meals);
+                totalFilters += 1;
+                let passed = 0;
+                meals.map(meal => { if(source.meals.indexOf(meal) !== -1) passed += 1;});
+                if(passed == meals.length) filters_passed += 1;
             }
             if(prices.min !== null && !isNaN(prices.min)){
                 totalFilters += 1;
@@ -432,7 +475,8 @@ $(document).ready(() => {
                     stars: hotel.stars, 
                     price: hotel.min_rate, 
                     rating: hotel.rating.total,
-                    serps: hotel.serp_filters })) {
+                    serps: hotel.serp_filters,
+                    meals: hotel.rates.map(rate => rate.meal) })) {
                     this.totalHotels += 1;
                     $('#hotels_result').append(`
                     <div id="hotel-${hotel.id}-${Math.random()}" class="card col-4" style="padding:5px;">
@@ -531,6 +575,9 @@ $(document).ready(() => {
 
             $.getJSON('./dist/js/serps.json', '', serps => {
                 this.serps = serps;
+            });
+            $.getJSON('./dist/js/meals.json', '', meals => {
+                this.meals = meals;
             });
         }
         this.roomSelect.render();
