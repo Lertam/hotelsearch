@@ -35,7 +35,7 @@ $(document).ready(() => {
     function RoomSelect() {
         this.dialogInitialized = false;
         this.rooms = [{
-            adults: 2,
+            adults: 1,
             children: []
         }];
         this.getInfo = () => this.rooms;
@@ -162,13 +162,13 @@ $(document).ready(() => {
         
         this.roomSelect = new RoomSelect();
         this.data = {
-            dest: { type: "", id:"" },
-            dates: { in: "", out: "" }
+            dest: { type: "hotel", id:"test_hotel" },
+            dates: { in: "2019-11-23", out: "2019-11-24" }
         };
         this.hotels = {};
         this.filters = {
             stars: [],
-            prices: {min:null, max:null}
+            prices: {min:0, max:100000}
         };
         
 
@@ -201,10 +201,10 @@ $(document).ready(() => {
                 this.hotels = {};
                 response.result.hotels.map(hotel => {
                     min_rate = 999999999;
-                    hotel.rates.map(rate => { irate = parseInt(rate.rate_price); if(!isNaN(irate) && irate < min_rate) min_rate = irate;}); 
+                    hotel.rates.forEach(rate => { irate = parseInt(rate.rate_price); if(!isNaN(irate) && irate < min_rate) min_rate = irate;}); 
                     this.hotels[hotel.id] = {
-                        id: hotel.id,
-                        min_rate
+                        min_rate,
+                        ...hotel
                     };
                 });
                 let ids = Object.keys(this.hotels);
@@ -214,7 +214,7 @@ $(document).ready(() => {
                 }
                 
                 Promise.all(promises).then(() => {
-                    $('#hotels').append('<div id="hotels_filter" class="row container-fluid" style="margin-bottom:20px">');
+                    $('#hotels').append('<div id="hotels_filter" class="container-fluid" style="margin-bottom:20px">');
                     $('#hotels').append('<div class="row container-fluid" id="hotels_result">');
                     this.renderFilters();
                     this.renderHotels(); 
@@ -233,29 +233,29 @@ $(document).ready(() => {
                                 <span class="fa fa-star checked"></span>
                                 <span class="fa fa-star checked"></span>
                                 <span class="fa fa-star checked"></span>
-                                <input type="checkbox" id="5-stars" data-id=5 />
+                                <input type="checkbox" id="5-stars" data-id=5 ${this.filters.stars.indexOf(5) !== -1 ? 'checked':''}/>
                             </label>
                             <label for="4-stars">
                                 <span class="fa fa-star checked"></span>
                                 <span class="fa fa-star checked"></span>
                                 <span class="fa fa-star checked"></span>
                                 <span class="fa fa-star checked"></span>
-                                <input type="checkbox" id="4-stars" data-id=4 />
+                                <input type="checkbox" id="4-stars" data-id=4 ${this.filters.stars.indexOf(4) !== -1 ? 'checked':''}/>
                             </label>
                             <label for="3-stars">
                                 <span class="fa fa-star checked"></span>
                                 <span class="fa fa-star checked"></span>
                                 <span class="fa fa-star checked"></span>
-                            <input type="checkbox" id="3-stars" data-id=3 />
+                            <input type="checkbox" id="3-stars" data-id=3 ${this.filters.stars.indexOf(3) !== -1 ? 'checked':''}/>
                             </label>
                             <label for="2-stars">
                                 <span class="fa fa-star checked"></span>
                                 <span class="fa fa-star checked"></span>
-                                <input type="checkbox" id="2-stars" data-id=2 />
+                                <input type="checkbox" id="2-stars" data-id=2 ${this.filters.stars.indexOf(2) !== -1 ? 'checked':''}/>
                             </label>
                             <label for="1-0-stars">
                                 <span class="fa fa-star checked"></span> или без звёзд
-                                <input type="checkbox" id="1-0-stars" data-id=1 />
+                                <input type="checkbox" id="1-0-stars" data-id=1 ${this.filters.stars.indexOf(1) !== -1 ? 'checked':''}/>
                             </label>
                         </fieldset>
                     </div>
@@ -263,19 +263,25 @@ $(document).ready(() => {
                 <div class="row">
                     <div class="col-6">
                         <fieldset id="price-filter">
-                            <legend style="font-size:1.2rem;">Цена за ночь:</legend>
-                            <div class="input-group">
-                                <input type="text" class="form-control" data-id="price-min" placeholder="От" />
-                                <div class="input-group-prepend input-group-append">
-                                    <span class="input-group-text">-</span>
-                                </div>
-                                <input type="text" class="form-control" data-id="price-max" placeholder="До" />
-                            </div>
+                            <legend style="font-size:1.2rem;">Цена за ночь: ${this.formatMoney(this.filters.prices.min, 0)} - ${this.formatMoney(this.filters.prices.max, 0)}</legend>
+                            <div id="price-range"></div>
                         </fieldset>
                     </div>
                 </div>
             `);
-            
+            $( "#price-range" ).slider({
+                range: true,
+                min: 0, // TODO: ?change to 100
+                max: 100000,
+                values: [ this.filters.prices.min, this.filters.prices.max ],
+                step: 100,
+                change: (event, ui) => {
+                  console.log(`Min: ${ui.values[0]} Max:${ui.values[1]}`);
+                  this.filters.prices.min = parseInt(ui.values[0]);
+                  this.filters.prices.max = parseInt(ui.values[1]);
+                  this.renderFilters();
+                }
+            });
             $(`#star-filter input[type=\"checkbox\"]`).checkboxradio({
                 icon: false
             });
@@ -283,19 +289,6 @@ $(document).ready(() => {
                 let id = parseInt(target.dataset.id);
                 if(this.filters.stars.indexOf(id) == -1) this.filters.stars.push(id);
                 else this.filters.stars.splice(this.filters.stars.indexOf(id), 1);
-                this.renderHotels(this.filter);
-            });
-
-            $('#price-filter input').change(({target}) => {
-                switch(target.dataset.id) {
-                    case 'price-min':
-                        this.filters.prices.min = parseInt(target.value);
-                        break;
-                    case 'price-max':
-                        this.filters.prices.max = parseInt(target.value);
-                        break;
-                }
-                console.log(this.filters.prices);
                 this.renderHotels(this.filter);
             });
         }
@@ -343,6 +336,7 @@ $(document).ready(() => {
             else return false;
         }
         this.renderHotels = (filter=()=>true) => {
+            console.log(this.hotels);
             $('#hotels_result').html('');
             this.totalHotels = 0;
             Object.keys(this.hotels).map(key => {
