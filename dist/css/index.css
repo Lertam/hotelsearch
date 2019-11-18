@@ -1,0 +1,57 @@
+/* div {
+    border:1px solid black;
+} */
+input.form-control:disabled,
+input.form-control[readonly] {
+    background-color: #fff;
+}
+
+.price-block {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.fa-star.checked {
+    color: orange;
+}
+
+.cbutton , .children-details .form-control{
+    width: min-content!important;
+    flex: none!important;
+    line-height: 1;
+}
+
+.form-control {
+    cursor: pointer;
+}
+
+.adults, .children, .children-details {
+    display:flex;
+    align-items:center;
+    margin-bottom: 10px;
+    justify-content: space-between;
+}
+
+.adults .input-group, .children .input-group {
+    justify-content:flex-end;
+}
+
+.children-details>div {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.brief-rooms {
+    display: block;
+    width: 100%;
+    font-size: 1rem;
+    line-height: 1;
+    color: #495057;
+    background-color: #fff;
+    background-clip: padding-box;
+    border: 1px solid #ced4da;
+    border-radius: .25rem;
+    transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+}
