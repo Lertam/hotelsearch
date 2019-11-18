@@ -55,3 +55,7 @@ input.form-control[readonly] {
     border-radius: .25rem;
     transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
 }
+
+.ui-slider-range.ui-corner-all.ui-widget-header {
+    background-color:green;
+}
