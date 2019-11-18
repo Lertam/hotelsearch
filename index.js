@@ -168,7 +168,8 @@ $(document).ready(() => {
         this.hotels = {};
         this.filters = {
             stars: [],
-            prices: {min:0, max:100000}
+            prices: {min:0, max:100000},
+            ratings: []
         };
         
 
@@ -268,6 +269,33 @@ $(document).ready(() => {
                         </fieldset>
                     </div>
                 </div>
+                <div class="row">
+                    <div class="col-12">
+                        <fieldset id="ratings-filter">
+                            <legend style="font-size:1.2rem;">Оценка по отзывам</legend>
+                            <label for="ratings-9+">
+                                Супер: 9+
+                                <input type="checkbox" id="ratings-9+" data-id=9 ${this.filters.ratings.indexOf(9) !== -1 ? 'checked':''}/>
+                            </label>
+                            <label for="ratings-8+">
+                                Отлично: 8+
+                                <input type="checkbox" id="ratings-8+" data-id=8 ${this.filters.ratings.indexOf(8) !== -1 ? 'checked':''}/>
+                            </label>
+                            <label for="ratings-7+">
+                                Очень хорошо: 7+
+                            <input type="checkbox" id="ratings-7+" data-id=7 ${this.filters.ratings.indexOf(7) !== -1 ? 'checked':''}/>
+                            </label>
+                            <label for="ratings-6+">
+                                Хорошо: 6+
+                                <input type="checkbox" id="ratings-6+" data-id=6 ${this.filters.ratings.indexOf(6) !== -1 ? 'checked':''}/>
+                            </label>
+                            <label for="ratings-5+">
+                                Неплохо: 5+
+                                <input type="checkbox" id="ratings-5+" data-id=5 ${this.filters.ratings.indexOf(5) !== -1 ? 'checked':''}/>
+                            </label>
+                        </fieldset>
+                    </div>
+                </div>
             `);
             $( "#price-range" ).slider({
                 range: true,
@@ -280,6 +308,7 @@ $(document).ready(() => {
                   this.filters.prices.min = parseInt(ui.values[0]);
                   this.filters.prices.max = parseInt(ui.values[1]);
                   this.renderFilters();
+                  this.renderHotels(this.filter);
                 }
             });
             $(`#star-filter input[type=\"checkbox\"]`).checkboxradio({
@@ -289,6 +318,15 @@ $(document).ready(() => {
                 let id = parseInt(target.dataset.id);
                 if(this.filters.stars.indexOf(id) == -1) this.filters.stars.push(id);
                 else this.filters.stars.splice(this.filters.stars.indexOf(id), 1);
+                this.renderHotels(this.filter);
+            });
+            $(`#ratings-filter input[type=\"checkbox\"]`).checkboxradio({
+                icon: false
+            });
+            $(`#ratings-filter input`).click(({target}) => {
+                let id = parseInt(target.dataset.id);
+                if(this.filters.ratings.indexOf(id) == -1) this.filters.ratings.push(id);
+                else this.filters.ratings.splice(this.filters.ratings.indexOf(id), 1);
                 this.renderHotels(this.filter);
             });
         }
@@ -317,12 +355,16 @@ $(document).ready(() => {
             return output;
         }
         this.filter = source => {
-            const { stars, prices } = this.filters;
+            const { stars, prices, ratings } = this.filters;
             let filters_passed = 0;
             let totalFilters = 0;
             if(stars.length > 0) {
                 totalFilters += 1;
                 if(stars.indexOf(source.stars) !== -1 || (source.stars == 0 && stars.indexOf(1) !== -1)) filters_passed += 1;
+            }
+            if(ratings.length > 0) {
+                totalFilters += 1;
+                if(ratings.indexOf(source.rating) !== -1) filters_passed += 1;
             }
             if(prices.min !== null && !isNaN(prices.min)){
                 totalFilters += 1;
@@ -341,7 +383,7 @@ $(document).ready(() => {
             this.totalHotels = 0;
             Object.keys(this.hotels).map(key => {
                 hotel = this.hotels[key];
-                if(filter({ stars: hotel.stars, price: hotel.min_rate })) {
+                if(filter({ stars: hotel.stars, price: hotel.min_rate, rating: hotel.rating.total })) {
                     this.totalHotels += 1;
                     $('#hotels_result').append(`
                     <div id="hotel-${hotel.id}-${Math.random()}" class="card col-4" style="padding:5px;">
