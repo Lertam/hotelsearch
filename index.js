@@ -169,9 +169,10 @@ $(document).ready(() => {
         this.filters = {
             stars: [],
             prices: {min:0, max:100000},
-            ratings: []
+            ratings: [],
+            serps: []
         };
-        
+        this.serps = [];
 
         this.getRegionIcon = type => {
             return type; //TODO: Release this function
@@ -223,6 +224,28 @@ $(document).ready(() => {
             });//TODO: Add error catching
         }
         this.renderFilters = (selector = '#hotels_filter') => {
+            let serps_output = '';
+            serps_output += '<label>В отеле</label><br />';
+            this.serps.hotel.map(serp => {
+                serps_output += `<label for="${serp.slug}">
+                    ${serp.title}
+                    <input type="checkbox" id=${serp.slug} ${this.filters.serps.indexOf(serp.slug) !== -1 ? 'checked':''} />
+                </label>`;
+            });
+            serps_output += '<br /><label>В номере</label><br />';
+            this.serps.room.map(serp => {
+                serps_output += `<label for="${serp.slug}">
+                    ${serp.title}
+                    <input type="checkbox" id=${serp.slug} ${this.filters.serps.indexOf(serp.slug) !== -1 ? 'checked':''} />
+                </label>`;
+            });
+            serps_output += '<br /><label>Особенности размещения</label><br />';
+            this.serps.features.map(serp => {
+                serps_output += `<label for="${serp.slug}">
+                    ${serp.title}
+                    <input type="checkbox" id=${serp.slug} ${this.filters.serps.indexOf(serp.slug) !== -1 ? 'checked':''} />
+                </label>`;
+            })
             $(selector).html(`
                 <div class="row">
                     <div class="col-12">
@@ -296,6 +319,14 @@ $(document).ready(() => {
                         </fieldset>
                     </div>
                 </div>
+                <div class="row">
+                    <div class="col-12">
+                        <fieldset id="serps-filter">
+                            <legend style="font-size:1.2rem;">Удобства и особенности размещения</legend>
+                            ${serps_output}
+                        </fieldset>
+                    </div>
+                </div>
             `);
             $( "#price-range" ).slider({
                 range: true,
@@ -304,7 +335,6 @@ $(document).ready(() => {
                 values: [ this.filters.prices.min, this.filters.prices.max ],
                 step: 100,
                 change: (event, ui) => {
-                  console.log(`Min: ${ui.values[0]} Max:${ui.values[1]}`);
                   this.filters.prices.min = parseInt(ui.values[0]);
                   this.filters.prices.max = parseInt(ui.values[1]);
                   this.renderFilters();
@@ -328,6 +358,16 @@ $(document).ready(() => {
                 if(this.filters.ratings.indexOf(id) == -1) this.filters.ratings.push(id);
                 else this.filters.ratings.splice(this.filters.ratings.indexOf(id), 1);
                 this.renderHotels(this.filter);
+            });
+            $(`#serps-filter input[type=\"checkbox\"]`).checkboxradio({
+                icon: false
+            });
+            $(`#serps-filter input`).click(({target}) => {
+                let slug = target.id;
+                if(this.filters.serps.indexOf(slug) == -1) this.filters.serps.push(slug);
+                else this.filters.serps.splice(this.filters.serps.indexOf(slug), 1);
+                this.renderHotels(this.filter);
+                console.log(this.filters);
             });
         }
         this.formatMoney = (amount, decimalCount = 2, decimal = ".", thousands = " ") => {
@@ -480,6 +520,9 @@ $(document).ready(() => {
                 }
             });
 
+            $.getJSON('./dist/js/serps.json', '', serps => {
+                this.serps = serps;
+            });
         }
         this.roomSelect.render();
         this.initEvents();
