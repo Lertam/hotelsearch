@@ -367,7 +367,6 @@ $(document).ready(() => {
                 if(this.filters.serps.indexOf(slug) == -1) this.filters.serps.push(slug);
                 else this.filters.serps.splice(this.filters.serps.indexOf(slug), 1);
                 this.renderHotels(this.filter);
-                console.log(this.filters);
             });
         }
         this.formatMoney = (amount, decimalCount = 2, decimal = ".", thousands = " ") => {
@@ -395,7 +394,7 @@ $(document).ready(() => {
             return output;
         }
         this.filter = source => {
-            const { stars, prices, ratings } = this.filters;
+            const { stars, prices, ratings, serps } = this.filters;
             let filters_passed = 0;
             let totalFilters = 0;
             if(stars.length > 0) {
@@ -405,6 +404,12 @@ $(document).ready(() => {
             if(ratings.length > 0) {
                 totalFilters += 1;
                 if(ratings.indexOf(source.rating) !== -1) filters_passed += 1;
+            }
+            if(serps.length > 0) {
+                totalFilters += 1;
+                let passed = 0;
+                serps.map(serp => { if(source.serps.indexOf(serp) !== -1) passed += 1;});
+                if(passed == serps.length) filters_passed += 1;
             }
             if(prices.min !== null && !isNaN(prices.min)){
                 totalFilters += 1;
@@ -423,7 +428,11 @@ $(document).ready(() => {
             this.totalHotels = 0;
             Object.keys(this.hotels).map(key => {
                 hotel = this.hotels[key];
-                if(filter({ stars: hotel.stars, price: hotel.min_rate, rating: hotel.rating.total })) {
+                if(filter({ 
+                    stars: hotel.stars, 
+                    price: hotel.min_rate, 
+                    rating: hotel.rating.total,
+                    serps: hotel.serp_filters })) {
                     this.totalHotels += 1;
                     $('#hotels_result').append(`
                     <div id="hotel-${hotel.id}-${Math.random()}" class="card col-4" style="padding:5px;">
