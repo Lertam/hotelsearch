@@ -11,7 +11,7 @@ $(document).ready(() => {
         email: "ion.vkid@gmail.com",
         guests: [
             {
-                "first_name": "Ostrovok",
+                "first_name": "Whitelist",
                 "last_name": "Ostrovok"
             }
         ],
@@ -19,7 +19,7 @@ $(document).ready(() => {
             {
                 guests: [
                     {
-                        "first_name": "Ostrovok",
+                        "first_name": "Whitelist",
                         "last_name": "Ostrovok"
                     }
                ]
@@ -27,59 +27,65 @@ $(document).ready(() => {
         ],
         partner_order_id: `${Math.random()}`.replace('.', ''),
         payment_type: {
-            amount: "2.00",
-            by: "credit_card",
-            currency_code:"RUB",
             is_need_credit_card_data:true,
             is_need_cvc:true,
-            type:"now",
-            vat_value:"0.00",
-            vat_included:false,
-            tax_data:{
-                taxes:[{
-                    trans_key:"RU;vat;vat",
-                    included_by_supplier:true,
-                    amount:"0.33",
-                    currency_code:"RUB"
-                }]
-            },
-            perks:{}
+            type:"now"
         },
-        phone: '79123456789',
-        user_ip: '82.29.0.86',
-        ret_path: '/test.html',
+        phone: '79997198036',
+        user_ip: '84.53.198.229',
+        ret_path: 'http://localhost/test.html',
         credit_card: {
-            e_year: "50",
-            card_holder: "JOHN DOE",
-            card_number: "4276380123227162",
-            secure_code: "999",
-            e_month: "11"
+            e_year: "23",
+            card_holder: "KONSTANTIN KHRYKIN",
+            card_number: "5536913781155979",
+            secure_code: "496",
+            e_month: "08"
           },
     };
-    const checkStatus = id => {
-        $.ajax({
-            ...settings,
-            url: `${baseUrl}/api/affiliate/v2/order/status`,
-            "method": "POST",
-            data: JSON.stringify({partner_order_id: id})
-        }).done(res=>console.log(res));
-    }
-    
     $.ajax({
-        url: `${baseUrl}/api/affiliate/v2/hotelpage/test_hotel?data=${JSON.stringify({checkin: '2019-12-12', checkout: '2019-12-13'})}`,
-        method: 'GET'
-    }).done(resp1 => {
-        req.book_hash = resp1.result.hotels[0].rates[0].book_hash
+        timeout: 0,
+        url: `/api.php?action=actualize&hotel_id=test_hotel&data=${JSON.stringify({checkin: '2019-12-12', checkout: '2019-12-13'})}`
+    }).done(actResp => {
+        console.log(actResp.result);
+        let min = 9999999;
+        actResp.result.hotels[0].rates.forEach(rate => {
+            if(parseInt(rate.rate_price) < min) {
+                min = parseInt(rate.rate_price);
+                req.book_hash = rate.book_hash;
+            }
+        });
         $.ajax({
-            url: `${baseUrl}/api/affiliate/v2/order/reserve`,
+            url: `/api.php?action=reserve`,
+            headers: {"Content-Type": "application/json"},
             method: 'POST',
             data: JSON.stringify(req)
         }).done(resp=>{
             console.log(resp);
             if(resp.debug.status == 200) {
                 // Success request
-                setTimeout(() => {
-                    checkStatus(resp.result.partner_order_id);
+                let checker = setInterval(() => {
+                    $.ajax({
+                        ...settings,
+                        url: `/api.php?action=status&data=${JSON.stringify({partner_order_id: resp.result.partner_order_id})}`,
+                        "method": "GET",
+                        // data: JSON.stringify({partner_order_id: id})
+                    }).done(res=> {
+                        let status = res.result.status;
+                        console.log(status);
+                        if(status == '3ds') {
+                            console.log(res.result.pay_data3ds);
+                            data = res.result.pay_data3ds;
+                            output = `<form method="${data.method}" target="_blank" action="${data.action_url}">
+                            <input hidden name="${data.pareq.name}" value="${data.pareq.value}" />
+                            <input hidden name="${data.termurl.name}" value="${data.termurl.value}" />
+                            <input hidden name="${data.md.name}" value="${data.md.value}" />
+                            <p>Для прохождения оплаты картой необходимо пройти 3-D-защиту. Вы будете переадресованы на сайт банка, выпустившего вашу карту.</p>
+                            <button type="submit">Пройти</button>
+                          </form>`;
+                          $('body').append(output);
+                            clearInterval(checker);
+                        }
+                    });
                 }, 5000);
             }
         });

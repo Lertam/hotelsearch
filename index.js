@@ -30,6 +30,61 @@ $(document).ready(() => {
               return two;
             }
             return five;
+        },
+        formatMoney: (amount, decimalCount = 2, decimal = ".", thousands = " ") => {
+            try {
+                decimalCount = Math.abs(decimalCount);
+                decimalCount = isNaN(decimalCount) ? 2 : decimalCount;
+            
+                const negativeSign = amount < 0 ? "-" : "";
+            
+                let i = parseInt(amount = Math.abs(Number(amount) || 0).toFixed(decimalCount)).toString();
+                let j = (i.length > 3) ? i.length % 3 : 0;
+            
+                return negativeSign + (j ? i.substr(0, j) + thousands : '') + i.substr(j).replace(/(\d{3})(?=\d)/g, "$1" + thousands) + (decimalCount ? decimal + Math.abs(amount - i).toFixed(decimalCount).slice(2) : "") + 	'&#8381;';
+              } catch (e) {
+                console.log(e)
+              }
+        },
+        mapMeal: (meal_slug) => {
+            let meal_title = meal_slug;
+            Utils.meals.forEach((meal) => {
+                if(meal.slug == meal_slug) {meal_title = meal.title; return 's';}
+            });
+            return meal_title;
+        },
+        mapSerps: (serp_slug) => {
+            let serp_title = serp_slug;
+            
+            Utils.serps.hotel.forEach((serp) => {
+                if(serp.slug == serp_slug) {serp_title = serp.title; return;}
+            });
+            console.log(serp_slug, Utils.serps.hotel);
+            Utils.serps.room.forEach((serp) => {
+                if(serp.slug == serp_slug) {serp_title = serp.title; return;}
+            });
+            console.log(serp_slug, Utils.serps.room);
+            Utils.serps.features.forEach((serp) => {
+                if(serp.slug == serp_slug) {serp_title = serp.title; return;}
+            });
+            console.log(serp_slug, Utils.serps.features);
+            return serp_title;
+        },
+        renderCancellationInfo: info => {
+            if(!!info.free_cancellation_before) {
+                // has free cancellation
+                return 'Бесплатная отмена до '+ Utils.formatDate(info.free_cancellation_before);
+            }
+            return '';
+        },
+        formatDate: dateStr => {
+            let date = new Date(dateStr);
+            let hours = date.getHours(),
+                minutes = date.getMinutes(),
+                day = date.getDay(),
+                month = date.getMonth() + 1,
+                year = date.getFullYear();
+            return `${(hours < 10 ? ` 0${hours}` : hours)}:${(minutes < 10 ? ` 0${minutes}` : minutes)} ${(day < 10 ? ` 0${day}` : day)}.${(month < 10 ? ` 0${month}` : month)}.${year}`;
         }
     }
     function RoomSelect() {
@@ -131,8 +186,10 @@ $(document).ready(() => {
                     position: { my: "left top", at: "left bottom", of: open_button},
                     title: ''
                 });
+                console.log('Dialog initialized');
                 $('.ui-dialog-titlebar').hide();
                 $('#rooms').click(() => {
+                    console.log('toggle dialog');
                     $('#dialog').dialog($('#dialog').dialog('isOpen') ? 'close' : 'open');
                 });
                 this.dialogInitialized = true;
@@ -151,6 +208,144 @@ $(document).ready(() => {
         return this;
     }
 
+    function ReserveService(hotel={name: 'N/A'}){
+        this.stage = 0;
+        this.stages = ['Выбор типа номера', 'Выбор тарифа'];
+        this.selected = {
+            group: null,
+            rate: null
+        };
+        this.hotel = hotel;
+        this.availableGroups = [];
+        this.hotel.rates.map(rate => {
+            let groups = this.hotel.room_groups.filter(group => group.room_group_id === rate.room_group_id);
+            if(groups.length > 0) {
+                let group = groups[0];
+                if(this.availableGroups.filter(av => av.room_group_id === group.room_group_id).length == 0) {
+                    let minPrice = 9999999;
+                    this.availableGroups.push({
+                        ...group, 
+                        prices: [ ...hotel.rates.filter(rt => rt.room_group_id === group.room_group_id).map(rt=> {
+                            price = parseInt(rt.rate_price);
+                            if(price<minPrice) minPrice = price;
+                            return price;})  ],
+                        minPrice
+                    });
+                };
+            }
+        });
+
+        this.renderTitle = () => {
+            $('#modalReserveTitle').html(`${hotel.name}. Шаг ${this.stage + 1} "${this.stages[this.stage]}".`);
+        }
+        this.renderStage = () => {
+            let output = '';
+            if(this.stage === 0) {
+                this.availableGroups.map((rate, rateInd) => {
+                    let images_output = '';
+                    let images = this.hotel.room_groups.filter(group => group.room_group_id === rate.room_group_id)[0].image_list_tmpl;
+                    if(images.length > 0) {
+                        images_output = `
+                            <div class="carousel" data-ride="carousel">
+                                <div class="carousel-inner">
+                                    ${images.map((img, ind) => `<div class="carousel-item${ ind == 0 ? ' active' : ''}">
+                                            <img class="d-block w-100" src="${img.src_secure.replace('{size}', 'x220')}">
+                                        </div>`
+                                    )}
+                                </div>
+                                <a class="carousel-control-prev" href="#carouselExampleControls" role="button" data-slide="prev">
+                                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                    <span class="sr-only">Previous</span>
+                                </a>
+                                <a class="carousel-control-next" href="#carouselExampleControls" role="button" data-slide="next">
+                                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                    <span class="sr-only">Next</span>
+                                </a>
+                            </div>
+                        `;
+                    } else {
+                        images_output = `<div class="text-center">Фото отсутствуют</div>`;
+                    }
+                    output += `
+                        <div class="card col-12 container-fluid">
+                            <div class="row">
+                                <div class="col-4">
+                                    <image class="card-img" src=${rate.thumbnail_tmpl.replace('{size}', 'x220')} />
+                                </div>
+                                <div class="col-8 card-body">
+                                    <h5 class="card-title">${rate.name}</h5>
+                                    <p class="card-text">Тарифы от ${Utils.formatMoney(rate.minPrice)}</p>
+                                    <div class="text-right">
+                                        <button class="btn btn-primary" data-id=${rateInd}>Выбрать</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                });
+            } else if(this.stage === 1) {
+                let rates = this.hotel.rates.filter(rate => rate.room_group_id == this.selected.group.room_group_id);
+                output += `
+                    <div class="col-12 container-fluid">
+                        <h2>Вы выбрали ${this.selected.group.name}.</h2>
+                        <div id="carouselControls" class="carousel slide w-50 m-auto" data-ride="carousel">
+                            <div class="carousel-inner">
+                                ${this.selected.group.image_list_tmpl.map((img, ind) => `
+                                    <div class="carousel-item${ind == 0 ? ' active': ''}">
+                                        <img class="d-block w-100" src="${img.src_secure.replace('{size}','x220')}" alt="First slide">
+                                    </div>`
+                                )}
+                            </div>
+                            <a class="carousel-control-prev" href="#carouselControls" role="button" data-slide="prev">
+                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                <span class="sr-only">Previous</span>
+                            </a>
+                            <a class="carousel-control-next" href="#carouselControls" role="button" data-slide="next">
+                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                <span class="sr-only">Next</span>
+                            </a>
+                        </div>
+                    </div>
+                `;
+                rates.map((rate, rateInd) => {
+                    output += `
+                        <div class="card col-12 container-fluid">
+                            <div class="row">
+                                <div class="col-12 card-body">
+                                    <h5 class="card-title">${rate.room_name}</h5>
+                                    <p class="card-text">Стоимость - ${Utils.formatMoney(rate.rate_price)}</p>
+                                    <p>${Utils.mapMeal(rate.meal)}</p>
+                                    <p>${Utils.renderCancellationInfo(rate.cancellation_info)}</p>
+                                    <div class="text-right">
+                                        <button class="btn btn-primary" data-id=${rateInd}>Выбрать</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                });
+            }
+            return output;
+        }
+        this.initStageEvents = () => {
+            if(this.stage === 0) {
+                $('#modalReserve .btn').click(({target}) => {
+                    let id = parseInt(target.dataset.id);
+                    this.selected.group = this.availableGroups[id];
+                    this.stage += 1;
+                    this.render();
+                });
+            }
+        }
+        this.render = () => {
+            this.renderTitle();
+            let output = this.renderStage();
+            $('#modalReserveBody').html(output);
+            $('#modalReserve').modal();
+            this.initStageEvents();
+        }
+        this.render();
+        return this;
+    }
+
     function Search() {
         this.baseUrl = "https://partner.ostrovok.ru";
         this.settings = {
@@ -162,8 +357,8 @@ $(document).ready(() => {
         
         this.roomSelect = new RoomSelect();
         this.data = {
-            dest: { type: "hotel", id:"test_hotel" },
-            dates: { in: "2019-11-23", out: "2019-11-24" }
+            dest: { type: "hotel", id:"test_hotel_do_not_book" },
+            dates: { in: "2019-12-19", out: "2019-12-20" }
         };
         this.hotels = {};
         this.filters = {
@@ -173,16 +368,29 @@ $(document).ready(() => {
             serps: [],
             meals: []
         };
-        this.serps = {hotel:[], room:[], features:[]};
-        this.meals = [];
+        
+        Utils.serps = {hotel:[], room:[], features:[]};
+        Utils.meals = [];
 
         this.getRegionIcon = type => {
             return type; //TODO: Release this function
         };
-
+        this.reinitState = () => {
+            this.data = {
+                dest: { type: "", id:"" },
+                dates: { in: "", out: "" }
+            };
+            this.hotels = {};
+            this.filters = {
+                stars: [],
+                prices: {min:0, max:100000},
+                ratings: [],
+                serps: [],
+                meals: []
+            };
+        }
         this.getHotels = () => {
             this.hotels = [];
-            $('#hotels').html('');
             const { dest, dates } = this.data
             let params = {
                 guests: this.roomSelect.getInfo(),
@@ -197,10 +405,14 @@ $(document).ready(() => {
             }
             let curSettings = {
                 ...this.settings,
-                url: `${this.baseUrl}/api/affiliate/v2/hotel/rates?data=${JSON.stringify(params)}`
+                url: `/api.php?action=getHotels&data=${JSON.stringify(params)}`
             };
             $.ajax(curSettings).done(response => {
                 this.totalHotels = response.result.total_hotels;
+                $('.search-results').html(`
+                    <div id="filters" class="col-3"></div>
+                    <div id="hotels" class="col-9"></div>
+                `);
                 $('#hotels').append(`<div class="row"><div class="col-12" id="total_title"><h3>Найдено отелей: ${ this.totalHotels }</h3></div></div>`);
                 this.hotels = {};
                 response.result.hotels.map(hotel => {
@@ -221,32 +433,33 @@ $(document).ready(() => {
                     $('#hotels').append('<div class="row container-fluid" id="hotels_result">');
                     this.renderFilters();
                     this.renderHotels(); 
+                    $('#search').attr('disabled', false);
                 });
             });//TODO: Add error catching
         }
         this.renderFilters = (selector = '#filters') => {
             let serps_output = '';
-            if(this.serps.hotel.length > 0){
+            if(Utils.serps.hotel.length > 0){
                 serps_output += '<label>В отеле</label><br />';
-                this.serps.hotel.map(serp => {
+                Utils.serps.hotel.map(serp => {
                 serps_output += `<label for="${serp.slug}">
                     ${serp.title}
                     <input type="checkbox" id=${serp.slug} ${this.filters.serps.indexOf(serp.slug) !== -1 ? 'checked':''} />
                 </label>`;
                 });
             }
-            if(this.serps.room.length > 0){
+            if(Utils.serps.room.length > 0){
                 serps_output += '<br /><label>В номере</label><br />';
-                this.serps.room.map(serp => {
+                Utils.serps.room.map(serp => {
                     serps_output += `<label for="${serp.slug}">
                         ${serp.title}
                         <input type="checkbox" id=${serp.slug} ${this.filters.serps.indexOf(serp.slug) !== -1 ? 'checked':''} />
                     </label>`;
                 });
             }
-            if(this.serps.features.length > 0){
+            if(Utils.serps.features.length > 0){
                 serps_output += '<br /><label>Особенности размещения</label><br />';
-                this.serps.features.map(serp => {
+                Utils.serps.features.map(serp => {
                     serps_output += `<label for="${serp.slug}">
                         ${serp.title}
                         <input type="checkbox" id=${serp.slug} ${this.filters.serps.indexOf(serp.slug) !== -1 ? 'checked':''} />
@@ -254,9 +467,9 @@ $(document).ready(() => {
                 });
             }
             let meals_output = '';
-            if(this.meals.length > 0) {
+            if(Utils.meals.length > 0) {
                 let allowed = ['nomeal', 'breakfast', 'half-board', 'full-board', 'all-inclusive'];
-                this.meals.filter(meal => allowed.indexOf(meal.slug) !== -1).map(meal =>
+                Utils.meals.filter(meal => allowed.indexOf(meal.slug) !== -1).map(meal =>
                     meals_output += `<label for="${meal.slug}">
                         ${meal.title}
                         <input type="checkbox" id=${meal.slug} ${this.filters.meals.indexOf(meal.slug) !== -1 ? 'checked':''} />
@@ -302,9 +515,9 @@ $(document).ready(() => {
                     </div>
                 </div>
                 <div class="row">
-                    <div class="col-6">
+                    <div class="col-12">
                         <fieldset id="price-filter">
-                            <legend style="font-size:1.2rem;">Цена за ночь: ${this.formatMoney(this.filters.prices.min, 0)} - ${this.formatMoney(this.filters.prices.max, 0)}</legend>
+                            <legend style="font-size:1.2rem;">Цена за ночь: ${Utils.formatMoney(this.filters.prices.min, 0)} - ${Utils.formatMoney(this.filters.prices.max, 0)}</legend>
                             <div id="price-range"></div>
                         </fieldset>
                     </div>
@@ -403,21 +616,7 @@ $(document).ready(() => {
                 this.renderHotels(this.filter);
             });
         }
-        this.formatMoney = (amount, decimalCount = 2, decimal = ".", thousands = " ") => {
-            try {
-                decimalCount = Math.abs(decimalCount);
-                decimalCount = isNaN(decimalCount) ? 2 : decimalCount;
-            
-                const negativeSign = amount < 0 ? "-" : "";
-            
-                let i = parseInt(amount = Math.abs(Number(amount) || 0).toFixed(decimalCount)).toString();
-                let j = (i.length > 3) ? i.length % 3 : 0;
-            
-                return negativeSign + (j ? i.substr(0, j) + thousands : '') + i.substr(j).replace(/(\d{3})(?=\d)/g, "$1" + thousands) + (decimalCount ? decimal + Math.abs(amount - i).toFixed(decimalCount).slice(2) : "") + 	'&#8381;';
-              } catch (e) {
-                console.log(e)
-              }
-        };
+        
         this.renderStars = stars => {
             output = '<span class="center">';
             if(stars == 0) output += 'Нет звезд';
@@ -482,21 +681,28 @@ $(document).ready(() => {
                             <h5 class="card-title">${hotel.name}</h5>
                             <p class="card-text">${hotel.address}</p>
                             <div class="price-block">
-                                <span class="center">${!!hotel.min_rate ? `От ${ this.formatMoney(hotel.min_rate)}` : '' }</span>
+                                <span class="center">${!!hotel.min_rate ? `От ${ Utils.formatMoney(hotel.min_rate)}` : '' }</span>
                                 ${ this.renderStars(hotel.stars) }
                             </div>
-                            <a href="${!!hotel.hotelpage ? hotel.hotelpage : '#'}" target="blank" class="btn btn-primary form-control">Подробнее</a>
+                            <!--<a href="${!!hotel.hotelpage ? hotel.hotelpage : '#'}" target="blank" class="btn btn-primary form-control">Подробнее</a>-->
+                            <button type="button" class="btn btn-primary showmodal" data-id=${hotel.id}>
+                                Подробнее
+                            </button>
                         </div>
                     </div>`);
                 }
             });
+            $('.showmodal').click(({target}) => {
+                id = target.dataset.id;
+                new ReserveService(this.hotels[id]);
+            })
             $('#total_title').html(`<h3>Найдено отелей: ${ this.totalHotels }</h3>`);
         }
         this.getHotelInfo = ids => {
             return new Promise((resolve, reject) => {
                 let curSettings = {
-                    ...this.settings,
-                    url: `${this.baseUrl}/api/affiliate/v2/hotel/list?data=${JSON.stringify({ ids })}`
+                    // ...this.settings,
+                    url: `/api.php?action=getInfo&data=${JSON.stringify({ ids })}`
                 };
                 $.ajax(curSettings).done(response => {
                     response.result.map(hotel => {
@@ -510,9 +716,10 @@ $(document).ready(() => {
         this.getMulticomplete = (req, callback) => {
             let curSettings = {
                 ...this.settings,
-                url: `${this.baseUrl}/api/affiliate/v2/multicomplete?query=${req.term}`
+                url: `/api.php?action=getMulticomplete&query=${req.term}`
             };
             $.ajax(curSettings).done(response => {
+                console.log(response);  
                 let result = [];
                 response.result.regions.map(region =>  result.push({label: `${ region.name }, ${region.country}`, value: region.id, type: 'region' }));
                 response.result.hotels.map(hotel =>  result.push({label: `${ hotel.name }, ${hotel.region_name}`, value: hotel.id, type: 'hotel' }));
@@ -565,21 +772,33 @@ $(document).ready(() => {
 
             $('#search').click(ev => {
                 if(this.validateForm()) {
-                    this.getHotels();
+                    $('.search-results').html(`
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="sr-only">Loading...</span>
+                            </div>
+                        </div>
+                    `);
+                    $('#search').attr('disabled', "true");
+                    setTimeout(()=>this.getHotels(),5000);
                 }
             });
-
-            $.getJSON('./dist/js/serps.json', '', serps => {
-                this.serps = serps;
-            });
-            $.getJSON('./dist/js/meals.json', '', meals => {
-                this.meals = meals;
-            });
+            Utils.serps = {"hotel": [{"lang":"ru","slug":"has_internet","sort_order":10,"title":"Бесплатный интернет","uid":1},{"lang":"ru","slug":"has_airport_transfer","sort_order":20,"title":"Трансфер","uid":5},{"lang":"ru","slug":"has_parking","sort_order":30,"title":"Парковка","uid":3},{"lang":"ru","slug":"has_pool","sort_order":50,"title":"Бассейн","uid":6},{"lang":"ru","slug":"has_fitness","sort_order":60,"title":"Фитнес","uid":4},{"lang":"ru","slug":"has_meal","sort_order":70,"title":"Бар или ресторан","uid":8},{"lang":"ru","slug":"has_busyness","sort_order":90,"title":"Конференц-зал","uid":21},{"lang":"ru","slug":"has_spa","sort_order":100,"title":"Спа-услуги","uid":7},{"lang":"ru","slug":"has_ski","sort_order":109,"title":"Горнолыжный склон рядом","uid":26},{"lang":"ru","slug":"beach","sort_order":110,"title":"Пляж рядом","uid":22}],"room": [{"lang":"ru","slug":"air-conditioning","sort_order":120,"title":"Кондиционер","uid":19},{"lang":"ru","slug":"private-bathroom","sort_order":900,"title":"Ванная комната в номере","uid":9},{"lang":"ru","slug":"window","sort_order":1000,"title":"Окно в номере","uid":15},{"lang":"ru","slug":"kitchen","sort_order":1100,"title":"Кухня","uid":16},{"lang":"ru","slug":"balcony","sort_order":1200,"title":"Балкон","uid":17},{"lang":"ru","slug":"with-view","sort_order":1300,"title":"Вид из окна","uid":18}],"features": [{"lang":"ru","slug":"has_kids","sort_order":40,"title":"Подходит для детей","uid":24},{"lang":"ru","slug":"has_pets","sort_order":80,"title":"Разрешено с домашними животными","uid":23},{"lang":"ru","slug":"has_disabled_support","sort_order":130,"title":"Для гостей с ограниченными возможностями","uid":20},{"lang":"ru","slug":"has_smoking","sort_order":1400,"title":"Можно курить","uid":27}]};
+            Utils.meals = [{"slug":"nomeal","title":"Питание не включено"},{"slug":"american-breakfast","title":"Американский завтрак"},{"slug":"asian-breakfast","title":"Азиатский завтрак"},{"slug":"breakfast","title":"Завтрак включён"},{"slug":"breakfast-buffet","title":"Завтрак \"шведский стол\""},{"slug":"breakfast-for-1","title":"Завтрак для 1"},{"slug":"breakfast-for-2","title":"Завтрак для 2"},{"slug":"chinese-breakfast","title":"Китайский завтрак"},{"slug":"continental-breakfast","title":"Континентальный завтрак"},{"slug":"dinner","title":"Ужин"},{"slug":"english-breakfast","title":"Английский завтрак"},{"slug":"half-board","title":"Завтрак и ужин включены"},{"slug":"full-board","title":"Завтрак, обед и ужин включены"},{"slug":"irish-breakfast","title":"Ирландский завтрак"},{"slug":"israeli-breakfast","title":"Израильский завтрак"},{"slug":"japanese-breakfast","title":"Японский завтрак"},{"slug":"lunch","title":"Обед"},{"slug":"scandinavian-breakfast","title":"Скандинавский завтрак"},{"slug":"scottish-breakfast","title":"Шотландский завтрак"},{"slug":"soft-all-inclusive","title":"soft-all-inclusive"},{"slug":"some-meal","title":"Питание включено"},{"slug":"super-all-inclusive","title":"super-all-inclusive"},{"slug":"ultra-all-inclusive","title":"ultra-all-inclusive"},{"slug":"all-inclusive","title":"Всё включено"}];
+            // $.getJSON('./dist/js/serps.json', '', serps => {
+            //     Utils.serps = serps;
+            // });
+            // $.getJSON('./dist/js/meals.json', '', meals => {
+            //     Utils.meals = meals;
+            // });
         }
         this.roomSelect.render();
         this.initEvents();
+        // For debug
+        $('#search').click();
         return this;
     }
+
 
     let search = new Search();
 });

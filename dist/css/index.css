@@ -1,6 +1,3 @@
-/* div {
-    border:1px solid black;
-} */
 input.form-control:disabled,
 input.form-control[readonly] {
     background-color: #fff;
@@ -58,4 +55,30 @@ input.form-control[readonly] {
 
 .ui-slider-range.ui-corner-all.ui-widget-header {
     background-color:green;
+}
+
+.search-panel {
+    background-color:#495057;
+    padding: 30px;
+    border-radius: 1rem 1rem 0 0;
+}
+
+.search-results {
+    border: 1px solid #495057;
+    padding-top:10px;
+}
+.search-results>div.text-center {
+    width:100%;
+    margin:50px;
+}
+
+#modalReserve .card {
+    margin-bottom: 5px;
+}
+
+#modalReserve .card-body {
+    justify-content: space-between;
+    flex-direction: column;
+    display: flex;
+    padding: 5px;
 }
