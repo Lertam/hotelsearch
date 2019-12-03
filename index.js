@@ -79,11 +79,13 @@ $(document).ready(() => {
         },
         formatDate: dateStr => {
             let date = new Date(dateStr);
+            console.log(date);
             let hours = date.getHours(),
                 minutes = date.getMinutes(),
-                day = date.getDay(),
+                day = date.getDate(),
                 month = date.getMonth() + 1,
                 year = date.getFullYear();
+                console.log(date.getDay());
             return `${(hours < 10 ? ` 0${hours}` : hours)}:${(minutes < 10 ? ` 0${minutes}` : minutes)} ${(day < 10 ? ` 0${day}` : day)}.${(month < 10 ? ` 0${month}` : month)}.${year}`;
         }
     }
@@ -208,7 +210,7 @@ $(document).ready(() => {
         return this;
     }
 
-    function ReserveService(hotel={name: 'N/A'}){
+    function ReserveService(hotel={name: 'N/A'}, search_info={}){
         this.stage = 0;
         this.stages = ['Выбор типа номера', 'Выбор тарифа'];
         this.selected = {
@@ -216,6 +218,7 @@ $(document).ready(() => {
             rate: null
         };
         this.hotel = hotel;
+        this.search_info = search_info;
         this.availableGroups = [];
         this.hotel.rates.map(rate => {
             let groups = this.hotel.room_groups.filter(group => group.room_group_id === rate.room_group_id);
@@ -286,7 +289,7 @@ $(document).ready(() => {
                 let rates = this.hotel.rates.filter(rate => rate.room_group_id == this.selected.group.room_group_id);
                 output += `
                     <div class="col-12 container-fluid">
-                        <h2>Вы выбрали ${this.selected.group.name}.</h2>
+                        <h5>Вы выбрали ${this.selected.group.name}.</h5>
                         <div id="carouselControls" class="carousel slide w-50 m-auto" data-ride="carousel">
                             <div class="carousel-inner">
                                 ${this.selected.group.image_list_tmpl.map((img, ind) => `
@@ -342,7 +345,21 @@ $(document).ready(() => {
             $('#modalReserve').modal();
             this.initStageEvents();
         }
-        this.render();
+        $('#modalReserveTitle').html('Загружаем данные...');
+        $('#modalReserveBody').html(`<div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+        </div>`);
+        $('#modalReserve').modal();
+        $('#modalReserve').modal('show');
+        $.ajax({
+            timeout: 0,
+            url: `/api.php?action=actualize&hotel_id=${this.hotel.id}&data=${JSON.stringify(this.search_info)}`
+        }).done(actResp => {
+            this.hotel.rates = actResp.result.hotels[0].rates;
+            this.render();
+        });
         return this;
     }
 
@@ -694,7 +711,12 @@ $(document).ready(() => {
             });
             $('.showmodal').click(({target}) => {
                 id = target.dataset.id;
-                new ReserveService(this.hotels[id]);
+                const { dates } = this.data;
+                new ReserveService(this.hotels[id],  {
+                    guests: this.roomSelect.getInfo(),
+                    checkin : dates.in,
+                    checkout : dates.out
+                });
             })
             $('#total_title').html(`<h3>Найдено отелей: ${ this.totalHotels }</h3>`);
         }
