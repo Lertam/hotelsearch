@@ -91,7 +91,7 @@ $(document).ready(() => {
         this.dialogInitialized = false;
         this.rooms = [{
             adults: 1,
-            children: [14]
+            children: []
         }];
         this.getInfo = () => this.rooms;
         this.addAdults = ({target}) => {
@@ -209,7 +209,7 @@ $(document).ready(() => {
 
     function ReserveService(hotel={name: 'N/A'}, search_info={}){
         this.stage = 0;
-        this.stages = ['Выбор типа номера', 'Выбор тарифа', 'Ввод данных о гостях'];
+        this.stages = ['Выбор типа номера', 'Выбор тарифа', 'Ввод данных о гостях', 'Проверка данных'];
         this.selected = {
             group: null,
             rate: null
@@ -247,7 +247,10 @@ $(document).ready(() => {
             }
         });
         this.renderTitle = () => {
+            if(this.stage == -1) $('#modalReserveTitle').hide();
+            else $('#modalReserveTitle').show();
             $('#modalReserveTitle').html(`${hotel.name}. Шаг ${this.stage + 1} "${this.stages[this.stage]}".`);
+            
         }
         this.renderRate = (rate, rateInd, useButton = false, selected = false) => {
             return `
@@ -282,7 +285,14 @@ $(document).ready(() => {
         }
         this.renderStage = () => {
             let output = '';
-            if(this.stage === 0) {
+            if(this.stage === -1) {
+                output = `<div class="col-12 container-fluid stage--1">
+                <div class="row">
+                    <div class="col-12"><h4>Похоже, в этом отеле нет доступных предложений...</h4></div>
+                </div>
+                
+            </div>`
+            } else if(this.stage === 0) {
                 this.availableGroups.map((rate, rateInd) => {
                     let images_output = '';
                     let images = this.hotel.room_groups.filter(group => group.room_group_id === rate.room_group_id)[0].image_list_tmpl;
@@ -326,7 +336,6 @@ $(document).ready(() => {
                         </div>`;
                 });
             } else if(this.stage === 1) {
-                let rates = this.hotel.rates.filter(rate => rate.room_group_id == this.selected.group.room_group_id);
                 output += `
                     <div class="col-12 container-fluid stage-1">
                         <h5>Вы выбрали ${this.selected.group.name}.</h5>
@@ -349,8 +358,8 @@ $(document).ready(() => {
                         </div>
                     </div>
                 `;
-                rates.map((rate, rateInd) => {
-                    output += this.renderRate(rate, rateInd, true, (this.selected.rate !== null && this.selected.rate.ind == rateInd));
+                this.hotel.rates.map((rate, rateInd) => {
+                    if(rate.room_group_id == this.selected.group.room_group_id) output += this.renderRate(rate, rateInd, true, (this.selected.rate !== null && this.selected.rate.ind == rateInd));
                 });
             } else if(this.stage === 2) {
                 let roomsData = '';               
@@ -361,12 +370,12 @@ $(document).ready(() => {
                         let fields = '';
                         Object.keys(guest).map(key => fields += this.renderField(key, guest[key], this.mapKey(key)));
                         guestsFields += `
-                            <div class="row" data-id="${guestInd}">
+                            <div class="row guest" data-id="${guestInd}">
                                 ${fields}
                             </div>`;
                     });
                     roomsData += (`
-                        <div class="card col" data-room_id="${roomInd}">
+                        <div class="card col room" data-id="${roomInd}">
                             <div class="card-title">Комната №${roomInd + 1}</div>
                             <div class="card-body">${ guestsFields }</div>
                         </div>
@@ -376,7 +385,7 @@ $(document).ready(() => {
                     <div class="col-12 container-fluid stage-2">
                         ${ this.renderRate(this.selected.rate)}
                         <form class="form">
-                            <div class="row">
+                            <div class="row contact">
                                 <div class="col-12">
                                     <h4>Контактная информация</h4>
                                 </div>
@@ -387,7 +396,7 @@ $(document).ready(() => {
                                     <input type="email" class="form-control" data-name="email" placeholder="E-mail">
                                 </div>
                             </div>
-                            <div class="row">
+                            <div class="row guests">
                                 <div class="col">
                                     <h4>Информация о гостях</h4>
                                     ${ roomsData }
@@ -397,25 +406,93 @@ $(document).ready(() => {
                     </div>
                 `;
                 
+            } else if(this.stage === 3) {
+                let roomsInfo = '';
+                this.data.rooms.forEach((room, roomInd) => {
+                    let guests = '';
+                    room.guests.forEach(guest => {
+                        guests += `<p>${guest.last_name} ${guest.first_name}</p>`;
+                    });
+                    roomsInfo += `
+                        <div class="card">
+                            <div class="card-title"><h6>Комната №${roomInd + 1}</h6></div>
+                            <div class="card-body">${ guests }</div>
+                        </div>
+                    `;
+                })
+                output = `<div class="col-12 container-fluid stage-3">
+                    <div class="row">
+                        <div class="col-12"><h4>Проверьте данные</h4></div>
+                        <div class="col">
+                            <h5>Контактная информация</h5>
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6>Телефон: ${this.data.phone}</h6>
+                                    <h6>E-mail: ${this.data.email}</h6>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <h5>Гости</h5>
+                            ${ roomsInfo }
+                        </div>
+                    </div>
+                    
+                </div>`;
+                
             }
             return output;
         }
-        this.renderFooter = () => {
+        this.validate = (silent = true) => {
+            if(this.stage == 0) {
+                return this.selected.group !== null;
+            } else if(this.stage == 1) {
+                return this.selected.rate !== null;
+            } else if(this.stage == 2) {
+                if(this.data.phone == '' || this.data.email == '') {
+                    if(!silent) alert('Укажите контактную информацию!');
+                    return false;
+                }
+                let checkedRooms = 0;
+                this.data.rooms.forEach(room => {
+                    checkedGuests = 0;
+                    room.guests.forEach(guest => {
+                        if(guest.first_name !== '' && guest.last_name !== '') checkedGuests += 1;
+                    });
+                    if(checkedGuests == room.guests.length) checkedRooms += 1;
+                });
+                if(checkedRooms !== this.data.rooms.length) {
+                    if(!silent) alert('Укажите имена и фамилии всех гостей, включая детей!');
+                    return false;
+                }
+                return true;
+            }
+        }
+        this.renderFooter = (reinitEvents = false) => {
             let output = '';
-            let prvBtn = `<div class="col prvBtn">
-                    <button id="prvBtn" class="btn btn-primary">Назад</button>
+            let prvBtn = (title = 'Назад') => `<div class="col prvBtn">
+                    <button id="prvBtn" class="btn btn-primary">${title}</button>
                 </div>`,
-                nxtBtn = `<div class="col nxtBtn">
-                    <button id="nxtBtn" class="btn btn-primary">Далее</button>
+                nxtBtn = (title="Далее") => `<div class="col nxtBtn">
+                    <button id="nxtBtn" class="btn btn-primary">${ title }</button>
                 </div>`;
-            if(this.stage == 0 && this.selected.group !== null) output = nxtBtn;
+            if(this.stage == 0 && this.validate()) output = nxtBtn();
             if(this.stage == 1) {
-                output += prvBtn;
-                if(this.selected.rate !== null) output += nxtBtn;
+                output += prvBtn();
+                if(this.validate()) output += nxtBtn();
+            }
+            if(this.stage == 2) {
+                output += prvBtn();
+                if(this.validate()) output += nxtBtn();
+            }
+            if(this.stage == 3) {
+                output += prvBtn();
+                output += nxtBtn();
             }
             $('#modalReserveFooter').html(output);
             if(output !== '') $('#modalReserveFooter').show();
             else $('#modalReserveFooter').hide();
+            if(reinitEvents) this.initStageEvents();
         }
         this.initStageEvents = () => {
             if(this.stage === 0) {
@@ -445,7 +522,35 @@ $(document).ready(() => {
                 });
 
             } else if(this.stage === 2) {
+                $('#modalReserveBody form .guests input').change(({target}) => {
+                    let room_id = parseInt($(target).parents('.room')[0].dataset.id);
+                    let guest_id = parseInt($(target).parents('.guest')[0].dataset.id);
+                    let key = target.dataset.name;
+                    let guests = this.data.rooms[room_id].guests;
+                    delete this.data.rooms[room_id].guests;
+                    guest = {...guests[guest_id]};
+                    guest[key]=target.value;
+                    guests[guest_id] = guest;
+                    this.data.rooms[room_id].guests = guests;
+                    this.renderFooter(true);
+                });
+                $('#modalReserveBody form .contact input').change(({target}) => {
+                    this.data[target.dataset.name] = target.value;
+                    this.renderFooter(true);
+                });
 
+                $('#nxtBtn').click(() => {
+                    console.log(this.data);
+                    if(this.validate(false)) {
+                        this.stage += 1;
+                        this.render();
+                    }
+                });
+
+                $('#prvBtn').click(() => {
+                    this.stage -= 1;
+                    this.render();
+                });
             }
         }
         this.render = () => {
@@ -457,6 +562,7 @@ $(document).ready(() => {
             this.initStageEvents();
         }
         $('#modalReserveTitle').html('Загружаем данные...');
+        $('#modalReserveFooter').hide();
         $('#modalReserveBody').html(`<div class="text-center">
             <div class="spinner-border" role="status">
                 <span class="sr-only">Loading...</span>
@@ -468,8 +574,11 @@ $(document).ready(() => {
             timeout: 0,
             url: `/api.php?action=actualize&hotel_id=${this.hotel.id}&data=${JSON.stringify(this.search_info)}`
         }).done(actResp => {
-            console.log(this.search_info);
-            this.hotel.rates = actResp.result.hotels[0].rates;
+            if(actResp.result.hotels.length > 0) {
+                this.hotel.rates = actResp.result.hotels[0].rates;
+            } else {
+                this.stage = -1;
+            }
             this.render();
         });
         return this;
@@ -479,14 +588,13 @@ $(document).ready(() => {
         this.baseUrl = "https://partner.ostrovok.ru";
         this.settings = {
             "method": "GET",
-            "username":"2545",
-            "password": "da7bdbcb-4179-4139-ace9-d63e66b345db",
             "timeout": 0,
         };
         
         this.roomSelect = new RoomSelect();
         this.data = {
-            dest: { type: "hotel", id:"test_hotel_do_not_book" },
+            //dest: { type: "region", id:"6308908" },
+            dest: {type: 'hotel', id: "test_hotel_do_not_book"},
             dates: { in: "2019-12-19", out: "2019-12-20" }
         };
         this.hotels = {};

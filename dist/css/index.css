@@ -82,6 +82,9 @@ input.form-control[readonly] {
     display: flex;
     padding: 5px;
 }
+#modalReserve .card-title {
+    padding: 5px;
+}
 
 #modalReserve .form fieldset {
     border: 1px solid gray;

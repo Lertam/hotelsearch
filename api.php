@@ -1,6 +1,9 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 header('Content-Type: application/json');
-include('top-cache.php');
+// include('top-cache.php');
 $method = $_SERVER['REQUEST_METHOD'];
 // $url = str_replace(']', '%5D', str_replace('[', '%5B', $_REQUEST['url']));
 $baseUrl = 'https://partner.ostrovok.ru';
@@ -11,9 +14,10 @@ switch($action) {
     case 'getMulticomplete':
         $query = $_REQUEST['query'];
         $curl = curl_init();
-
+        // var_dump($query);
+        // die();
         curl_setopt_array($curl, array(
-            CURLOPT_URL => ($baseUrl."/api/affiliate/v2/multicomplete?query=".$query),
+            CURLOPT_URL => ($baseUrl."/api/affiliate/v2/multicomplete?query=". $query),//urlencode("{\"query\":\"".$query."do not\"}")),
             CURLOPT_USERPWD => $keys,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_ENCODING => "",
@@ -23,7 +27,6 @@ switch($action) {
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
             CURLOPT_CUSTOMREQUEST => $method,
         ));
-        
         $response = curl_exec($curl);
         $err = curl_error($curl);
         
@@ -258,4 +261,4 @@ switch($action) {
         break;
 }
 
-include('bottom-cache.php');
+// include('bottom-cache.php');
