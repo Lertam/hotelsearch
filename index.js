@@ -457,7 +457,7 @@ $(document).ready(() => {
                             <label class="dpf-input-label">Credit Card Number</label>
                             <div class="dpf-input-container with-icon">
                                 <span class="dpf-input-icon"><i class="fa fa-credit-card" aria-hidden="true"></i></span>
-                                <input type="text" class="dpf-input" size="20" data-type="card_number">
+                                <input type="text" class="dpf-input" size="20" data-type="number">
                             </div>
                         </div>
                   
@@ -474,7 +474,7 @@ $(document).ready(() => {
                             <div class="dpf-input-column">
                                 <label class="dpf-input-label">Code</label>
                                 <div class="dpf-input-container">
-                                    <input type="text" class="dpf-input" size="4" data-type="secure_code">
+                                    <input type="text" class="dpf-input" size="4" data-type="cvc">
                                 </div>
                             </div>
                         </div>
@@ -482,7 +482,7 @@ $(document).ready(() => {
                         <div class="dpf-input-row">
                             <label class="dpf-input-label">Full Name</label>
                             <div class="dpf-input-container">
-                                <input type="text" size="4" class="dpf-input" data-type="card_holder">
+                                <input type="text" size="4" class="dpf-input" data-type="name">
                             </div>
                         </div>
                   
@@ -627,11 +627,16 @@ $(document).ready(() => {
 
                 $('#modalReserveBody input').change(({target}) => {
                     let key = target.dataset.type;
-                    console.log(key, target.value);
                     if(key === 'expiry') {
                         let dates = target.value.split(' / ');
-                        this.data.credit_card[e_month] = dates[0];
-                        this.data.credit_card[e_year] = dates[1];
+                        this.data.credit_card.e_month = dates[0];
+                        this.data.credit_card.e_year = dates[1];
+                    } else if(key === 'number') {
+                        this.data.credit_card.card_number = target.value;
+                    } else if(key === 'name') {
+                        this.data.credit_card.card_holder = target.value;
+                    } else if(key === 'cvc') {
+                        this.data.credit_card.secure_code = target.value;
                     } else this.data.credit_card[key] = target.value;
                 });
             }

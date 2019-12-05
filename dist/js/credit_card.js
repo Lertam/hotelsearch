@@ -3,10 +3,10 @@ window.initPaymentForm = () => {
         form_selector: '#payment-form',
         card_container_selector: '.dpf-card-placeholder',
     
-        number_selector: '.dpf-input[data-type="card_number"]',
+        number_selector: '.dpf-input[data-type="number"]',
         date_selector: '.dpf-input[data-type="expiry"]',
-        cvc_selector: '.dpf-input[data-type="secure_code"]',
-        name_selector: '.dpf-input[data-type="card_holder"]',
+        cvc_selector: '.dpf-input[data-type="cvc"]',
+        name_selector: '.dpf-input[data-type="name"]',
     
         submit_button_selector: '.dpf-submit',
     
