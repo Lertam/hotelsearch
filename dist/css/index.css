@@ -82,3 +82,24 @@ input.form-control[readonly] {
     display: flex;
     padding: 5px;
 }
+
+#modalReserve .form fieldset {
+    border: 1px solid gray;
+    border-radius: 0.5rem;
+    padding: 5px;
+}
+#modalReserve .form fieldset legend{
+    width:auto;
+}
+
+.stage-2 form .card-body .row {
+    margin-bottom: 5px;
+}
+
+#modalReserve .prvBtn {
+    text-align: left;
+}
+
+#modalReserve .nxtBtn {
+    text-align: right;
+}

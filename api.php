@@ -1,6 +1,6 @@
 <?php
 header('Content-Type: application/json');
-// include('top-cache.php');
+include('top-cache.php');
 $method = $_SERVER['REQUEST_METHOD'];
 // $url = str_replace(']', '%5D', str_replace('[', '%5B', $_REQUEST['url']));
 $baseUrl = 'https://partner.ostrovok.ru';
@@ -258,4 +258,4 @@ switch($action) {
         break;
 }
 
-// include('bottom-cache.php');
+include('bottom-cache.php');
