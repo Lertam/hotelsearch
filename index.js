@@ -219,7 +219,14 @@ $(document).ready(() => {
         this.data = {
             phone: '',
             email: '',
-            rooms: []
+            rooms: [],
+            credit_card: {
+                "e_year": '',
+                "card_holder": '',
+                "card_number": '',
+                "secure_code": '',
+                "e_month": ''
+            }
         }
         this.search_info.guests.map(room => {
             let tmpl = {first_name:'', last_name:'Ostrovok'};
@@ -440,6 +447,56 @@ $(document).ready(() => {
                     
                 </div>`;
                 
+            } else if(this.stage === 4) {
+                output += `
+                <form action="/" method="POST" id="payment-form" class="datpayment-form">
+                    <p>Мы не храним данные Вашей карты. Ввод данных нужен для передачи Вашему банку информации об оплате.</p>
+                    <div class="dpf-card-placeholder"></div>
+                    <div class="dpf-input-container">
+                        <div class="dpf-input-row">
+                            <label class="dpf-input-label">Credit Card Number</label>
+                            <div class="dpf-input-container with-icon">
+                                <span class="dpf-input-icon"><i class="fa fa-credit-card" aria-hidden="true"></i></span>
+                                <input type="text" class="dpf-input" size="20" data-type="number">
+                            </div>
+                        </div>
+                  
+                        <div class="dpf-input-row">
+                            <div class="dpf-input-column">
+                                <input type="hidden" size="2" data-type="exp_month" placeholder="MM">
+                                <input type="hidden" size="2" data-type="exp_year" placeholder="YY">
+                  
+                                <label class="dpf-input-label">Expiration Date</label>
+                                <div class="dpf-input-container">
+                                    <input type="text" class="dpf-input" data-type="expiry">
+                                </div>
+                            </div>
+                            <div class="dpf-input-column">
+                                <label class="dpf-input-label">Code</label>
+                                <div class="dpf-input-container">
+                                    <input type="text" class="dpf-input" size="4" data-type="cvc">
+                                </div>
+                            </div>
+                        </div>
+                  
+                        <div class="dpf-input-row">
+                            <label class="dpf-input-label">Full Name</label>
+                            <div class="dpf-input-container">
+                                <input type="text" size="4" class="dpf-input" data-type="name">
+                            </div>
+                        </div>
+                  
+                        <button type="submit" class="dpf-submit">
+                                <span class="btn-active-state">
+                                    Submit
+                                </span>
+                                <!--<span class="btn-loading-state">
+                                    <i class="fa fa-refresh "></i>
+                                </span>-->
+                        </button>
+                    </div>
+                </form>
+                `
             }
             return output;
         }
@@ -540,7 +597,7 @@ $(document).ready(() => {
                 });
 
                 $('#nxtBtn').click(() => {
-                    console.log(this.data);
+                    console.log(this.data, this.validate());
                     if(this.validate(false)) {
                         this.stage += 1;
                         this.render();
@@ -550,6 +607,37 @@ $(document).ready(() => {
                 $('#prvBtn').click(() => {
                     this.stage -= 1;
                     this.render();
+                });
+            } else if(this.stage === 3) {
+                $('#nxtBtn').click(() => {
+                    this.stage += 1;
+                    this.render();
+                });
+
+                $('#prvBtn').click(() => {
+                    this.stage -= 1;
+                    this.render();
+                });
+            } else if(this.stage === 4) {
+                window.initPaymentForm();
+
+                $('#modalReserveBody button[type="submit"]').click(() => {
+                    console.log(this.data.credit_card);
+                });
+
+                $('#modalReserveBody input').change(({target}) => {
+                    let key = target.dataset.type;
+                    if(key === 'expiry') {
+                        let dates = target.value.split(' / ');
+                        this.data.credit_card.e_month = dates[0];
+                        this.data.credit_card.e_year = dates[1];
+                    } else if(key === 'number') {
+                        this.data.credit_card.card_number = target.value;
+                    } else if(key === 'name') {
+                        this.data.credit_card.card_holder = target.value;
+                    } else if(key === 'cvc') {
+                        this.data.credit_card.secure_code = target.value;
+                    } else this.data.credit_card[key] = target.value;
                 });
             }
         }
