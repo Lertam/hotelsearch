@@ -87,7 +87,7 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
         }
     }
     this.renderField = (name, value, placeholder='') => {
-        return `<div class="col">
+        return `<div class="col-12 col-sm-6">
             <input type="text" class="form-control" value="${value}" data-name="${name}" placeholder="${placeholder}" />
         </div>`;
     }
@@ -147,7 +147,7 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
             output += `
                 <div class="col-12 container-fluid stage-1">
                     <h5>Вы выбрали ${this.data.group.name}.</h5>
-                    <div id="carouselControls" class="carousel slide w-50 m-auto" data-ride="carousel">
+                    <div id="carouselControls" class="carousel slide w-100 w-sm-50 m-auto" data-ride="carousel">
                         <div class="carousel-inner">
                             ${this.data.group.image_list_tmpl.map((img, ind) => `
                                 <div class="carousel-item${ind == 0 ? ' active': ''}">
@@ -197,10 +197,10 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
                             <div class="col-12">
                                 <h4>Контактная информация</h4>
                             </div>
-                            <div class="col">
+                            <div class="col-12 col-sm-6">
                                 <input type="tel" class="form-control" data-name="phone" placeholder="Телефон">
                             </div>
-                            <div class="col">
+                            <div class="col-12 col-sm-6">
                                 <input type="email" class="form-control" data-name="email" placeholder="E-mail">
                             </div>
                         </div>
@@ -250,14 +250,13 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
             
         } else if(this.stage === 4) {
             if(!this.data.rate.payment_options.payment_types[0].is_need_credit_card_data) {
-                console.log
                 this.stage = 5;
                 this.render();
                 return;
             }
             output += `
                 <p>Мы не храним данные Вашей карты. Ввод данных нужен для передачи Вашему банку информации об оплате.</p>
-                <form id="payment-form" class="col-6 m-auto">
+                <form id="payment-form" class="col-12 col-sm-6 m-auto">
                     <div class="form-group">
                         <input type="text" name="card_number" class="form-control" id="card_number" placeholder="Номер карты" />
                     </div>
@@ -314,7 +313,6 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
                 method: 'POST',
                 data: JSON.stringify(params)
             }).done(resp=>{
-                console.log(resp);
                 if(resp.debug.status == 200) {
                     let checker = setInterval(() => {
                         $.ajax({
@@ -328,9 +326,7 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
                                 return;
                             }
                             let status = res.result.status;
-                            console.log(status);
                             if(status == '3ds') {
-                                console.log(res.result.pay_data3ds);
                                 let data = res.result.pay_data3ds;
                                 output = `<form method="${data.method}" target="_blank" action="${data.action_url}">
                                     <input hidden name="${data.pareq.name}" value="${data.pareq.value}" />
@@ -353,7 +349,7 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
                     }, 5000);
                 } else {
                     alert('Ошибка! Попробуйте позже.');
-                    console.log(resp);
+                    console.error(resp);
                 }
             });
         }
@@ -479,7 +475,6 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
             });
 
             $('#nxtBtn').click(() => {
-                console.log(this.data, this.validate());
                 if(this.validate(false)) {
                     this.stage += 1;
                     this.render();

@@ -107,12 +107,6 @@ input.form-control[readonly] {
     text-align: right;
 }
 
-#modalInfoBtn {
-    position: absolute;
-    top: 10px;
-    right: 50px;
-}
-
 #modalInfo #info-form label {
     margin:auto;
 }
@@ -123,4 +117,17 @@ input.form-control[readonly] {
 
 #cancel, #submit {
     padding:.5rem 1rem
+}
+
+@media(max-width: 320px) {
+    /* #modalInfoBtn {
+        position: absolute;
+        top: 10px;
+        margin:auto;
+    } */
+
+    .search-panel #rooms {
+        flex-basis: calc(100% - 30px);
+        margin: auto 15px;
+    }
 }

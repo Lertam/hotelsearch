@@ -46,7 +46,6 @@ export default function InfoService() {
     this.render = () => {
         let output = '';
         if(this.stage == -1) {
-            console.log('error', this.error);
             output = `<h3>Произошла ошибка!</h3>`;
             if(this.error !== null) output += `<h4>${this.error}</h4>`;
             else output += `<h4>Попробуйте позже.</h4>`;
@@ -224,8 +223,7 @@ export default function InfoService() {
             $('#info-form').submit(ev => {
                 ev.preventDefault();
                 this.poid = $('#info-form #poid').val();
-                // Disbaled for debug
-                /*if(!(/^[0-9]{16}$/g).test(this.poid)) {
+                if(!(/^[0-9]{16}$/g).test(this.poid)) {
                     let error = `
                         <small id="poidHelpBlock" class="form-text text-danger">
                             Номер бронирования состоит из 16 цифр.
@@ -236,7 +234,7 @@ export default function InfoService() {
                     }
                     $('#poid').addClass('border-danger');
                     return;
-                }*/
+                }
                 this.stage += 1;
                 this.render();
             });

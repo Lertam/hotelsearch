@@ -13,9 +13,8 @@ export default function Search() {
     
     this.roomSelect = new RoomSelect();
     this.data = {
-        //dest: { type: "region", id:"6308908" },
-        dest: {type: 'hotel', id: "test_hotel_do_not_book"},
-        dates: { in: "2019-12-19", out: "2019-12-20" }
+        dest: { type: "", id:"" },
+        dates: { in: "", out: "" }
     };
     this.hotels = {};
     this.filters = {
@@ -64,8 +63,9 @@ export default function Search() {
         $.ajax(curSettings).done(response => {
             this.totalHotels = response.result.total_hotels;
             $('.search-results').html(`
-                <div id="filters" class="col-3"></div>
-                <div id="hotels" class="col-9"></div>
+                <div class="col-12 d-sm-none"><div class="col"><button class="btn btn-primary w-100" id="filtersBtn">Фильтр</button></div></div>
+                <div id="filters" class="d-none d-sm-flex flex-sm-column col-sm-3"></div>
+                <div id="hotels" class="col-12 col-sm-9"></div>
             `);
             $('#hotels').append(`<div class="row"><div class="col-12" id="total_title"><h3>Найдено отелей: ${ this.totalHotels }</h3></div></div>`);
             this.hotels = {};
@@ -92,6 +92,10 @@ export default function Search() {
         });//TODO: Add error catching
     }
     this.renderFilters = (selector = '#filters') => {
+        $('#filtersBtn').off();
+        $('#filtersBtn').click(() => {
+            $('#filters').toggleClass('d-none');
+        });
         let serps_output = '';
         if(serps.hotel.length > 0){
             serps_output += '<label>В отеле</label><br />';
@@ -328,7 +332,7 @@ export default function Search() {
                 meals: hotel.rates.map(rate => rate.meal) })) {
                 this.totalHotels += 1;
                 $('#hotels_result').append(`
-                <div id="hotel-${hotel.id}-${Math.random()}" class="card col-4" style="padding:5px;">
+                <div id="hotel-${hotel.id}-${Math.random()}" class="card col-12 col-sm-4" style="padding:5px;">
                     <img src="${hotel.thumbnail}" class="card-img-top" alt="${hotel.name}">
                     <div class="card-body">
                         <h5 class="card-title">${hotel.name}</h5>
@@ -397,24 +401,28 @@ export default function Search() {
     }
 
     this.render = () => {
-        let modalInfoBtn = `<button id="modalInfoBtn" class="btn btn-link">Информация/отмена бронирования</button>`;
+        let modalInfoBtn = `
+            <div class="container d-flex justify-content-end">
+                <button id="modalInfoBtn" class="btn btn-link">Информация/отмена бронирования</button>
+            </div>
+        `;
         $('body').append(modalInfoBtn);
-        let searchForm = `<div class="container" style="margin-top:50px">
+        let searchForm = `<div class="container">
             <div class="container-fluid">
                 <div class="row search-panel">
-                    <div class="ui-widget col-5">
+                    <div class="ui-widget col-12 col-sm-5">
                         <div class="cool-input">
                             <input class="form-control" id="dest" placeholder="Страна/город/отель" />
                         </div>
                     </div>
-                    <div class="dates col-3">
+                    <div class="dates col-12 col-sm-3">
                         <div class="input-group">
                             <input type="text" class="form-control" id="checkin_date" size="10" placeholder="Заезд" />
                             <input type="text" class="form-control" id="checkout_date" size="10" placeholder="Выезд" />
                         </div>
                     </div>
-                    <div class="col-2 brief-rooms" id="rooms"></div>
-                    <div class="col-2">
+                    <div class="col-12 col-sm-2 brief-rooms" id="rooms"></div>
+                    <div class="col-12 col-sm-2">
                         <button class="form-control" id="search">Поиск</button>
                     </div>
                 </div>
@@ -483,7 +491,8 @@ export default function Search() {
                     </div>
                 `);
                 $('#search').attr('disabled', "true");
-                setTimeout(()=>this.getHotels(),5000);
+                // setTimeout(()=>this.getHotels(),2000);
+                this.getHotels();
             }
         });
     }
@@ -491,8 +500,6 @@ export default function Search() {
     this.roomSelect.render();
     
     this.initEvents();
-    // For debug
-    // $('#search').click();
 
     if(window.partner_order_id !== undefined) {
         let output = `<div class="text-center">
@@ -513,13 +520,13 @@ export default function Search() {
                 method: "GET"
             }).done(res=> {
                 if(res.debug.status !== 200) {
-                    output = '<h3>Произошла ошибка при пронировании. Повторите попытку позже.</h3>';
+                    output = '<h3>Произошла ошибка при бронировании. Повторите попытку позже.</h3>';
+                    output += '<h4>При повторении ошибок, напишите на admin@365-travels.ru.</h4>';
                     $('#modalReserveBody').html(output);
                     clearInterval(checker);
                     return;
                 }
                 let status = res.result.status;
-                console.log(status);
                 if(status == 'ok') {
                     output = `
                         <div>Номер вашего бронирования в системе 365-travels - <strong>${window.partner_order_id}</strong>. Используйте его в случае отмены бронирования.</div>
