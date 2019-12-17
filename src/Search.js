@@ -58,7 +58,7 @@ export default function Search() {
         }
         let curSettings = {
             ...this.settings,
-            url: `/?mode=api&action=getHotels&data=${JSON.stringify(params)}`
+            url: `${window.location.origin}${window.location.pathname}=api&action=getHotels&data=${JSON.stringify(params)}`
         };
         $.ajax(curSettings).done(response => {
             this.totalHotels = response.result.total_hotels;
@@ -364,7 +364,7 @@ export default function Search() {
         return new Promise((resolve, reject) => {
             let curSettings = {
                 // ...this.settings,
-                url: `/?mode=api&action=getInfo&data=${JSON.stringify({ ids })}`
+                url: `${window.location.origin}${window.location.pathname}?mode=api&action=getInfo&data=${JSON.stringify({ ids })}`
             };
             $.ajax(curSettings).done(response => {
                 response.result.map(hotel => {
@@ -378,7 +378,7 @@ export default function Search() {
     this.getMulticomplete = (req, callback) => {
         let curSettings = {
             ...this.settings,
-            url: `/?mode=api&action=getMulticomplete&query=${req.term}`
+            url: `${window.location.origin}${window.location.pathname}?mode=api&action=getMulticomplete&query=${req.term}`
         };
         $.ajax(curSettings).done(response => {
             let result = [];
@@ -516,7 +516,7 @@ export default function Search() {
         $('#modalReserve').modal('show');
         let checker = setInterval(() => {
             $.ajax({
-                url: `/?mode=api&action=status&data=${JSON.stringify({partner_order_id: window.partner_order_id})}`,
+                url: `${window.location.origin}${window.location.pathname}?mode=api&action=status&data=${JSON.stringify({partner_order_id: window.partner_order_id})}`,
                 method: "GET"
             }).done(res=> {
                 if(res.debug.status !== 200) {

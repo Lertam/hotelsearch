@@ -75,7 +75,7 @@ export default function InfoService() {
                     </div>
                 </div>
             `;
-            $.ajax(`?mode=api&action=reserve-info&partner_order_id=${this.poid}`)
+            $.ajax(`${window.location.origin}${window.location.pathname}?mode=api&action=reserve-info&partner_order_id=${this.poid}`)
                 .done(resp => {
                     if(resp.debug.status === 200) {
                         this.info = resp.result;
@@ -187,7 +187,7 @@ export default function InfoService() {
                     </div>
                 </div>
             `;
-            $.ajax(`?mode=api&action=cancel&partner_order_id=${this.poid}`)
+            $.ajax(`${window.location.origin}${window.location.pathname}?mode=api&action=cancel&partner_order_id=${this.poid}`)
                 .done(resp => {
                     if(resp.debug.status === 200) {
                         let success = resp.result.success;

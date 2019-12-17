@@ -275,7 +275,7 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
                 phone: this.data.phone,
                 email: this.data.email,
                 user_ip: "", // It will be pushed at backend
-                ret_path: "http://365-travels.ru/?mode=finish",
+                ret_path: `${window.location.origin}${window.location.pathname}?mode=finish`,
                 payment_type: this.data.rate.payment_options.payment_types[0],
                 guests: [],
                 rooms: this.data.rooms,
@@ -308,7 +308,7 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
             $('#modalReserve').modal();
 
             $.ajax({
-                url: `/?mode=api&action=reserve`,
+                url: `${window.location.origin}${window.location.pathname}?mode=api&action=reserve`,
                 headers: {"Content-Type": "application/json"},
                 method: 'POST',
                 data: JSON.stringify(params)
@@ -316,7 +316,7 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
                 if(resp.debug.status == 200) {
                     let checker = setInterval(() => {
                         $.ajax({
-                            url: `/?mode=api&action=status&data=${JSON.stringify({partner_order_id: resp.result.partner_order_id})}`,
+                            url: `${window.location.origin}${window.location.pathname}?mode=api&action=status&data=${JSON.stringify({partner_order_id: resp.result.partner_order_id})}`,
                             method: "GET"
                         }).done(res=> {
                             if(res.debug.status !== 200) {
@@ -544,7 +544,7 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
     $('#modalReserve').modal('show');
     $.ajax({
         timeout: 0,
-        url: `/?mode=api&action=actualize&hotel_id=${this.hotel.id}&data=${JSON.stringify(this.search_info)}`
+        url: `${window.location.origin}${window.location.pathname}?mode=api&action=actualize&hotel_id=${this.hotel.id}&data=${JSON.stringify(this.search_info)}`
     }).done(actResp => {
         if(actResp.result.hotels.length > 0) {
             this.hotel.rates = actResp.result.hotels[0].rates;
