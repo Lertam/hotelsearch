@@ -1,0 +1,28 @@
+{
+  "name": "hotelsearch",
+  "version": "1.0.0",
+  "description": "365-travels.ru\r Поиск и бронирование отелей.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "webpack --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Lertam/hotelsearch.git"
+  },
+  "author": "lertam <ion.vkid@gmail.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Lertam/hotelsearch/issues"
+  },
+  "homepage": "https://github.com/Lertam/hotelsearch#readme",
+  "devDependencies": {
+    "card-validator": "^6.2.0",
+    "credit-card-input-mask": "^2.0.1",
+    "css-loader": "^3.3.0",
+    "style-loader": "^1.0.1",
+    "webpack": "^4.41.2",
+    "webpack-cli": "^3.3.10"
+  }
+}
