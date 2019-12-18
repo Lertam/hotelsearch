@@ -130,4 +130,8 @@ input.form-control[readonly] {
         flex-basis: calc(100% - 30px);
         margin: auto 15px;
     }
+
+    #carouselControls {
+        width:100%!important;
+    }
 }

@@ -147,7 +147,7 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
             output += `
                 <div class="col-12 container-fluid stage-1">
                     <h5>Вы выбрали ${this.data.group.name}.</h5>
-                    <div id="carouselControls" class="carousel slide w-100 w-sm-50 m-auto" data-ride="carousel">
+                    <div id="carouselControls" class="carousel slide w-50 m-auto" data-ride="carousel">
                         <div class="carousel-inner">
                             ${this.data.group.image_list_tmpl.map((img, ind) => `
                                 <div class="carousel-item${ind == 0 ? ' active': ''}">
@@ -256,7 +256,7 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
             }
             output += `
                 <p>Мы не храним данные Вашей карты. Ввод данных нужен для передачи Вашему банку информации об оплате.</p>
-                <form id="payment-form" class="col-12 col-sm-6 m-auto">
+                <form id="payment-form" class="col-12 col-sm-6 offset-sm-3">
                     <div class="form-group">
                         <input type="text" name="card_number" class="form-control" id="card_number" placeholder="Номер карты" />
                     </div>
@@ -270,12 +270,13 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
                 </form>
             `;
         } else if(this.stage === 5) {
+            let poid = Math.random().toFixed(15).replace('.', '');
             let params = {
-                partner_order_id: Math.random().toFixed(15).replace('.', ''),
+                partner_order_id: poid,
                 phone: this.data.phone,
                 email: this.data.email,
                 user_ip: "", // It will be pushed at backend
-                ret_path: `${window.location.origin}${window.location.pathname}?mode=finish`,
+                ret_path: `${window.location.origin}${window.location.pathname}?mode=finish&partner_order_id=${poid}`,
                 payment_type: this.data.rate.payment_options.payment_types[0],
                 guests: [],
                 rooms: this.data.rooms,
