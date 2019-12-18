@@ -100,7 +100,6 @@ export default function RoomSelect() {
             });
             $('.ui-dialog-titlebar').hide();
             $('#rooms').click(() => {
-                console.log('toggle dialog');
                 $('#dialog').dialog($('#dialog').dialog('isOpen') ? 'close' : 'open');
             });
             this.dialogInitialized = true;

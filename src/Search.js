@@ -5,12 +5,12 @@ import RoomSelect from './RoomSelect';
 import ReserveService from './ReserveService';
 import InfoService from './InfoService';
 
-export default function Search() {
+export default function Search(selector = 'body') {
     this.settings = {
         "method": "GET",
         "timeout": 0,
     };
-    
+    this.selector = selector;
     this.roomSelect = new RoomSelect();
     this.data = {
         dest: { type: "", id:"" },
@@ -58,7 +58,7 @@ export default function Search() {
         }
         let curSettings = {
             ...this.settings,
-            url: `${window.location.origin}${window.location.pathname}=api&action=getHotels&data=${JSON.stringify(params)}`
+            url: `${window.location.origin}${window.location.pathname}?mode=api&action=getHotels&data=${JSON.stringify(params)}`
         };
         $.ajax(curSettings).done(response => {
             this.totalHotels = response.result.total_hotels;
@@ -343,7 +343,7 @@ export default function Search() {
                         </div>
                         <!--<a href="${!!hotel.hotelpage ? hotel.hotelpage : '#'}" target="blank" class="btn btn-primary form-control">Подробнее</a>-->
                         <button type="button" class="btn btn-primary showmodal" data-id=${hotel.id}>
-                            Подробнее
+                            Бронировать
                         </button>
                     </div>
                 </div>`);
@@ -391,12 +391,118 @@ export default function Search() {
     this.validateForm = () => {
         const { data } = this;
         const { dest, dates } = data;
-        if(isBlank(dest.type) || isBlank(dest.id)) {console.error('You must provide dest'); return false;}
-        if (dest.type !== 'region' && dest.type !== 'hotel') {console.error('Hotel and region are only availabale types.'); return false;}
+        if(isBlank(dest.type) || isBlank(dest.id)) {
+            $('#error-message').html('Необходимо выбрать пункт назначения.');
+            $('#error-message').dialog({
+                modal: true,
+                buttons: {
+                    Ok: function() {
+                      $( this ).dialog( "close" );
+                    }
+                }
+            });
+            return false;
+        }
+        if (dest.type !== 'region' && dest.type !== 'hotel') {
+            $('#error-message').html('Выберите отель или город.');
+            $('#error-message').dialog({
+                modal: true,
+                buttons: {
+                    Ok: function() {
+                      $( this ).dialog( "close" );
+                    }
+                }
+            });
+            return false;
+        }
         // Не позже 366 дней с текущего момента.
-        if(isBlank(dates.in)){console.error('You must provide checkin'); return false;}
+        if(isBlank(dates.in)){
+            $('#error-message').html('Укажите дату заезда.');
+            $('#error-message').dialog({
+                modal: true,
+                buttons: {
+                    Ok: function() {
+                      $( this ).dialog( "close" );
+                    }
+                }
+            });
+            return false;
+        }
+        
+        let current_date = new Date(); 
+        let checkin_date = new Date(dates.in); 
+        let Difference_In_Time = checkin_date.getTime() - current_date.getTime(); 
+        let Difference_In_Days = Difference_In_Time / (1000 * 3600 * 24); 
+        if(Difference_In_Days > 366) {
+            $('#error-message').html('Дата заезда не должна быть познее 1 года с текущего момента.');
+            $('#error-message').dialog({
+                modal: true,
+                buttons: {
+                    Ok: function() {
+                      $( this ).dialog( "close" );
+                    }
+                }
+            });
+            return false;
+        }
         // Не более 30 дней, начиная с checkin date.
-        if(isBlank(dates.out)){console.error('You must provide checkout'); return false;}
+        if(isBlank(dates.out)){
+            $('#error-message').html('Укажите дату выезда.');
+            $('#error-message').dialog({
+                modal: true,
+                buttons: {
+                    Ok: function() {
+                      $( this ).dialog( "close" );
+                    }
+                }
+            });
+            return false;
+        }
+        let checkout_date = new Date(dates.out);
+        console.log(checkout_date.getTime(), checkin_date.getTime());
+        if(checkout_date.getTime() <= checkin_date.getTime()) {
+            $('#error-message').html('Дата выезда не может быть раньше даты заезда.');
+            $('#error-message').dialog({
+                modal: true,
+                buttons: {
+                    Ok: function() {
+                      $( this ).dialog( "close" );
+                    }
+                }
+            });
+            return false;
+        }
+        Difference_In_Time = checkout_date.getTime() - checkin_date.getTime();
+        Difference_In_Days = Difference_In_Time / (1000 * 3600 * 24); 
+        if(Difference_In_Days > 30) {
+            $('#error-message').html('Дата выезда не должна быть познее 1 месяца с даты заезда.');
+            $('#error-message').dialog({
+                modal: true,
+                buttons: {
+                    Ok: function() {
+                      $( this ).dialog( "close" );
+                    }
+                }
+            });
+            return false;
+        }
+        let rooms = this.roomSelect.getInfo();
+        let passed = true;
+        rooms.forEach(room => {
+            if(room.adults == 0 && room.children.length == 0) passed = false;
+        });
+        if(!passed) {
+            $('#error-message').html('В комнате должен быть хотя бы один гость.');
+            $('#error-message').dialog({
+                modal: true,
+                buttons: {
+                    Ok: function() {
+                      $( this ).dialog( "close" );
+                    }
+                }
+            });
+            return false;
+        }
         return true;
     }
 
@@ -406,7 +512,7 @@ export default function Search() {
                 <button id="modalInfoBtn" class="btn btn-link">Информация/отмена бронирования</button>
             </div>
         `;
-        $('body').append(modalInfoBtn);
+        $(this.selector).append(modalInfoBtn);
         let searchForm = `<div class="container">
             <div class="container-fluid">
                 <div class="row search-panel">
@@ -431,7 +537,13 @@ export default function Search() {
             </div>
         </div>
         <div id="dialog"></div>`;
-        $('body').append(searchForm);
+        $(this.selector).append(searchForm);
+        let errorMessage = `
+            <div id="error-message" title="Ошибка">
+            </div>
+        `;
+        $(this.selector).append(errorMessage);
+        
         let modalReserve = `<div class="modal fade" id="modalReserve" tabindex="-1" role="dialog" aria-labelledby="Reserve Service" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
             <div class="modal-content">
@@ -448,8 +560,8 @@ export default function Search() {
             </div>
             </div>
         </div>`;
-        $('body').append(modalReserve);
-        new InfoService();
+        $(this.selector).append(modalReserve);
+        new InfoService(this.selector);
     }
 
     this.initEvents = () => {

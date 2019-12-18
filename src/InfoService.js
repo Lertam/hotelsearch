@@ -1,10 +1,11 @@
 import { formatDate, mapMeal } from './Utils';
 
-export default function InfoService() {
+export default function InfoService(selector = 'body') {
     this.stage = 0;
     this.poid = null;
     this.info = null;
     this.error = null;
+    this.selector = selector;
 
     this.generateModal = output => `
         <div class="modal fade" id="modalInfo" tabindex="-1" role="dialog" aria-labelledby="Info Service" aria-hidden="true">
@@ -214,7 +215,7 @@ export default function InfoService() {
             $('#modalInfoBody').html(output);
             $('#modalInfo').modal();
         } else {
-            $('body').append(this.generateModal(output));
+            $(this.selector).append(this.generateModal(output));
         }
         this.initEvents();
     }

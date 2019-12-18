@@ -22,7 +22,7 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
         }
     }
     this.search_info.guests.map(room => {
-        let tmpl = {first_name:'', last_name:'Ostrovok'};
+        let tmpl = {first_name:'', last_name:''};
         let res = { guests: [] };
         for(var i=0;i<room.adults;i++) res.guests.push(tmpl);
         for(var i=0;i<room.children.length;i++) res.guests.push(tmpl);
@@ -290,7 +290,7 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
             
             this.data.rooms.forEach(room => {
                 room.guests.forEach(guest => {
-                    guest.last_name = 'Ostrovok';
+                    // guest.last_name = 'Ostrovok';
                     params.guests.push(guest);
                 });
             });
