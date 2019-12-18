@@ -12,14 +12,6 @@ module.exports = {
         filename: 'bundle.js'
     },
     devtool: 'inline-source-map',
-    plugins: [
-        // new webpack.ProvidePlugin({
-        //     $: "jquery",
-        //     jQuery: "jquery",
-        //     "window.jQuery": "jquery'",
-        //     "window.$": "jquery"
-        // })
-    ],
     module: {
         rules: [{
             test: /\.css$/,

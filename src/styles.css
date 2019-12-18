@@ -119,6 +119,16 @@ input.form-control[readonly] {
     padding:.5rem 1rem
 }
 
+.btnClose {
+    color: gray;
+    border: 0;
+    background: none;
+    font-size: 1.5rem!important;
+    padding: 0;
+    line-height: 1rem;
+    outline: none!important;
+}
+
 @media(max-width: 320px) {
     /* #modalInfoBtn {
         position: absolute;

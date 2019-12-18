@@ -51,7 +51,7 @@ export default function RoomSelect() {
         return `${totalRooms} комнат${getNoun(totalRooms, 'а','ы', '')}<br/> ${ totalGuests } гост${getNoun(totalGuests, 'ь', 'я', 'ей')}`;
     }
     this.render = () => {
-        let output = '';
+        let output = '<div class="d-flex justify-content-end"><button id="roomsClose" class="btnClose">&times;</button></div>';
         this.rooms.map((room, room_ind) => {
             output += `<div class="room card" data-room_id=${room_ind}>`;
             output += `<div class="card-body">`;
@@ -106,7 +106,9 @@ export default function RoomSelect() {
         }
         $('#dialog').html(output);
         
-        
+        $('#roomsClose').click(() => {
+            $('#dialog').dialog('close');
+        })
         $('#addRoom').click(this.addRoom);
         $('.room .card-title button.delete').click(this.delRoom);
         $('.adults button.add').click(this.addAdults);

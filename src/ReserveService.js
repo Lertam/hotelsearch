@@ -3,7 +3,7 @@ import valid from 'card-validator';
 import RestrictedInput from 'credit-card-input-mask';
 
 export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
-    this.stage = 0;
+    this.stage = -1;
     this.stages = ['Выбор типа номера', 'Выбор тарифа', 'Ввод данных о гостях', 'Проверка данных', 'Оплата', 'Бронирование'];
     this.hotel = hotel;
     this.search_info = search_info;
@@ -47,9 +47,10 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
         }
     });
     this.renderTitle = () => {
-        if(this.stage == -1) $('#modalReserveTitle').hide();
+        if(this.stage == -2) $('#modalReserveTitle').hide();
         else $('#modalReserveTitle').show();
-        $('#modalReserveTitle').html(`${hotel.name}. Шаг ${this.stage + 1} "${this.stages[this.stage]}".`);
+        if(this.stage == -1) $('#modalReserveTitle').html(`${this.hotel.name}`);
+        else $('#modalReserveTitle').html(`${this.hotel.name}. Шаг ${this.stage + 1} "${this.stages[this.stage]}".`);
         
     }
     this.renderCancellationInfo = info => {
@@ -93,45 +94,46 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
     }
     this.renderStage = () => {
         let output = '';
-        if(this.stage === -1) {
+        if(this.stage === -2) {
             output = `<div class="col-12 container-fluid stage--1">
             <div class="row">
                 <div class="col-12"><h4>Похоже, в этом отеле нет доступных предложений...</h4></div>
             </div>
             
         </div>`;
+        } else if(this.stage === -1) {
+            output = `
+                <div id="carouselControls" class="carousel slide w-50 m-auto" data-ride="carousel">
+                    <div class="carousel-inner">
+                        ${this.hotel.images.map((img, ind) => `
+                            <div class="carousel-item${ind == 0 ? ' active': ''}">
+                                <img class="d-block w-100" src="${img.url}" alt="First slide">
+                            </div>`
+                        )}
+                    </div>
+                    <a class="carousel-control-prev" href="#carouselControls" role="button" data-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        <span class="sr-only">Previous</span>
+                    </a>
+                    <a class="carousel-control-next" href="#carouselControls" role="button" data-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        <span class="sr-only">Next</span>
+                    </a>
+                </div>`;
+            output += this.hotel.description;
+            output += `
+                <div class="d-flex justify-content-center">
+                    <button class="btn btn-primary" id="nxtBtn">Забронировать</button>
+                </div>
+            `;
         } else if(this.stage === 0) {
             this.availableGroups.map((rate, rateInd) => {
-                let images_output = '';
-                let images = this.hotel.room_groups.filter(group => group.room_group_id === rate.room_group_id)[0].image_list_tmpl;
-                if(images.length > 0) {
-                    images_output = `
-                        <div class="carousel" data-ride="carousel">
-                            <div class="carousel-inner">
-                                ${images.map((img, ind) => `<div class="carousel-item${ ind == 0 ? ' active' : ''}">
-                                        <img class="d-block w-100" src="${img.src_secure.replace('{size}', 'x220')}">
-                                    </div>`
-                                )}
-                            </div>
-                            <a class="carousel-control-prev" href="#carouselExampleControls" role="button" data-slide="prev">
-                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                                <span class="sr-only">Previous</span>
-                            </a>
-                            <a class="carousel-control-next" href="#carouselExampleControls" role="button" data-slide="next">
-                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                                <span class="sr-only">Next</span>
-                            </a>
-                        </div>
-                    `;
-                } else {
-                    images_output = `<div class="text-center">Фото отсутствуют</div>`;
-                }
                 let selected = (this.data.group !== null && this.data.group.room_group_id == rate.room_group_id);
                 output += `
                     <div class="card col-12 container-fluid stage-0${selected ? ' border-success' : ''}">
                         <div class="row">
                             <div class="col-4">
-                                ${!!rate.thumnnail_tmpl ? `<image class="card-img" src=${rate.thumbnail_tmpl.replace('{size}', 'x220')} />` : '' }
+                                ${!!rate.thumbnail_tmpl ? `<image class="card-img" src=${rate.thumbnail_tmpl.replace('{size}', 'x220')} />` : '' }
                             </div>
                             <div class="col-8 card-body">
                                 <h5 class="card-title">${rate.name}</h5>
@@ -408,7 +410,8 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
             nxtBtn = (title="Далее") => `<div class="col nxtBtn">
                 <button id="nxtBtn" class="btn btn-primary">${ title }</button>
             </div>`;
-        if(this.stage == 0 && this.validate()) output = nxtBtn();
+        // if(this.stage == -1) output = nxtBtn();
+        if(this.stage == 0 && this.validate()) output = prvBtn() + nxtBtn();
         if(this.stage == 1) {
             output += prvBtn();
             if(this.validate()) output += nxtBtn();
@@ -431,10 +434,21 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
         if(reinitEvents) this.initStageEvents();
     }
     this.initStageEvents = () => {
-        if(this.stage === 0) {
+        if(this.stage === -1) {
+            
+            $('#nxtBtn').click(() => {
+                this.stage += 1;
+                this.render();
+            });
+        } else if(this.stage === 0) {
             $('#modalReserve .btn.select').click(({target}) => {
                 let id = parseInt(target.dataset.id);
                 this.data.group = this.availableGroups[id];
+                this.render();
+            });
+            $('#prvBtn').click(() => {
+                this.stage -= 1;
+                this.data.rate = null;
                 this.render();
             });
             $('#nxtBtn').click(() => {
@@ -550,7 +564,7 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
         if(actResp.result.hotels.length > 0) {
             this.hotel.rates = actResp.result.hotels[0].rates;
         } else {
-            this.stage = -1;
+            this.stage = -2;
         }
         this.render();
     });

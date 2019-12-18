@@ -10,6 +10,7 @@ export default function Search(selector = 'body') {
         "method": "GET",
         "timeout": 0,
     };
+    this.page = 1;
     this.selector = selector;
     this.roomSelect = new RoomSelect();
     this.data = {
@@ -319,10 +320,12 @@ export default function Search(selector = 'body') {
         if(filters_passed === totalFilters) return true;
         else return false;
     }
-    this.renderHotels = (filter=()=>true) => {
+    this.renderHotels = (filter = () => true, add = false) => {
         $('#hotels_result').html('');
-        this.totalHotels = 0;
-        Object.keys(this.hotels).map(key => {
+        let keys = Object.keys(this.hotels);
+        this.totalHotels = keys.length;
+        for(var i = 0; i < keys.length; i++) {
+            let key = keys[i];
             let hotel = this.hotels[key];
             if(filter({ 
                 stars: hotel.stars, 
@@ -330,7 +333,6 @@ export default function Search(selector = 'body') {
                 rating: hotel.rating.total,
                 serps: hotel.serp_filters,
                 meals: hotel.rates.map(rate => rate.meal) })) {
-                this.totalHotels += 1;
                 $('#hotels_result').append(`
                 <div id="hotel-${hotel.id}-${Math.random()}" class="card col-12 col-sm-4" style="padding:5px;">
                     <img src="${hotel.thumbnail}" class="card-img-top" alt="${hotel.name}">
@@ -343,12 +345,12 @@ export default function Search(selector = 'body') {
                         </div>
                         <!--<a href="${!!hotel.hotelpage ? hotel.hotelpage : '#'}" target="blank" class="btn btn-primary form-control">Подробнее</a>-->
                         <button type="button" class="btn btn-primary showmodal" data-id=${hotel.id}>
-                            Бронировать
+                            Подробнее
                         </button>
                     </div>
                 </div>`);
             }
-        });
+        };
         $('.showmodal').click(({target}) => {
             let id = target.dataset.id;
             const { dates } = this.data;
@@ -459,7 +461,6 @@ export default function Search(selector = 'body') {
             return false;
         }
         let checkout_date = new Date(dates.out);
-        console.log(checkout_date.getTime(), checkin_date.getTime());
         if(checkout_date.getTime() <= checkin_date.getTime()) {
             $('#error-message').html('Дата выезда не может быть раньше даты заезда.');
             $('#error-message').dialog({
@@ -594,6 +595,7 @@ export default function Search(selector = 'body') {
         this.createDatepicker('out');
 
         $('#search').click(ev => {
+            this.page = 1;
             if(this.validateForm()) {
                 $('.search-results').html(`
                     <div class="text-center">
