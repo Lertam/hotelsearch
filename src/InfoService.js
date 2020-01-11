@@ -1,6 +1,6 @@
 import { formatDate, mapMeal } from './Utils';
 
-export default function InfoService(selector = 'body') {
+export default function InfoService(selector = 'body', genHash) {
     this.stage = 0;
     this.poid = null;
     this.info = null;
@@ -214,6 +214,8 @@ export default function InfoService(selector = 'body') {
         if($('#modalInfo').length > 0) {
             $('#modalInfoBody').html(output);
             $('#modalInfo').modal();
+            $('#modalInfo').on('hidden.bs.modal', () => genHash(false));
+            $('#modalInfo').on('shown.bs.modal', () => genHash(true));
         } else {
             $(this.selector).append(this.generateModal(output));
         }

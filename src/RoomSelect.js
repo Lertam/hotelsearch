@@ -1,11 +1,12 @@
 import { getNoun } from './Utils';
 
-export default function RoomSelect() {
+export default function RoomSelect(startScope = [], genHash) {
     this.dialogInitialized = false;
     this.rooms = [{
         adults: 1,
         children: []
     }];
+    if(!!startScope && startScope.length > 0) this.rooms = startScope;
     this.getInfo = () => this.rooms;
     this.addAdults = ({target}) => {
         let ind = parseInt($(target).parents('.room')[0].dataset.room_id);
@@ -21,6 +22,7 @@ export default function RoomSelect() {
         let room_ind = parseInt($(target).parents('.room')[0].dataset.room_id);
         let child_id = parseInt(target.dataset.id);
         this.rooms[room_ind].children[child_id] = parseInt(target.value);
+        genHash(this.rooms);
     }
     this.addChild = ({target}) => {
         let room_ind = parseInt($(target).parents('.room')[0].dataset.room_id);
@@ -51,6 +53,7 @@ export default function RoomSelect() {
         return `<span>${totalRooms} комнат${getNoun(totalRooms, 'а','ы', '')}</span><span>${ totalGuests } гост${getNoun(totalGuests, 'ь', 'я', 'ей')}</span>`;
     }
     this.render = () => {
+        genHash(this.rooms);
         let output = '<div class="d-flex justify-content-end"><button id="roomsClose" class="btnClose">&times;</button></div>';
         this.rooms.map((room, room_ind) => {
             output += `<div class="room card" data-room_id=${room_ind}>`;

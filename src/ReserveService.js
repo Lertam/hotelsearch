@@ -554,7 +554,9 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
         let output = this.renderStage();
         this.renderFooter();
         $('#modalReserveBody').html(output);
-        $('#modalReserve').modal();
+        $('#modalReserve').modal({
+            close: () => console.log('Close')
+        });
         this.initStageEvents(true);
     }
     $('#modalReserveTitle').html('Загружаем данные...');
