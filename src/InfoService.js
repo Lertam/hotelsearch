@@ -54,8 +54,8 @@ export default function InfoService(selector = 'body') {
             output = `
                 <form id="info-form">
                     <div class="row col">
-                        <label class="col-12 col-sm-7" for="poid">Номер вашего бронирования в системе 365-travels</label>
-                        <div class="col-12 col-sm-5">
+                        <label class="col-12 col-lg-7" for="poid">Номер вашего бронирования в системе 365-travels</label>
+                        <div class="col-12 col-lg-5">
                             <input type="text" id="poid" class="form-control" required />
                         </div>
                     </div>

@@ -43,14 +43,19 @@ export default function Search(selector = 'body') {
             meals: []
         };
     }
+    this.correctCheckDate = (dat) => {
+        let arr = dat.split('-');
+        let res = arr.map(part => {if(part.length < 2) part = '0'+part;return part;});
+        return res.join('-');
+    }
     this.getHotels = () => {
         this.hotels = [];
         const { dest, dates } = this.data
         let params = {
             guests: this.roomSelect.getInfo(),
             adults: 1,
-            checkin : dates.in,
-            checkout : dates.out
+            checkin : this.correctCheckDate(dates.in),
+            checkout : this.correctCheckDate(dates.out)
         };
         if(dest.type === 'region') {
             params.region_id = dest.id;
@@ -64,9 +69,9 @@ export default function Search(selector = 'body') {
         $.ajax(curSettings).done(response => {
             this.totalHotels = response.result.total_hotels;
             $('.search-results').html(`
-                <div class="col-12 d-sm-none"><div class="col"><button class="btn btn-primary w-100" id="filtersBtn">Фильтр</button></div></div>
-                <div id="filters" class="d-none d-sm-flex flex-sm-column col-sm-3"></div>
-                <div id="hotels" class="col-12 col-sm-9"></div>
+                <div class="col-12 d-lg-none"><button class="btn btn-primary w-100" id="filtersBtn">Фильтр</button></div>
+                <div id="filters" class="d-none d-lg-flex flex-lg-column col-lg-3"></div>
+                <div id="hotels" class="col-12 col-lg-9"></div>
             `);
             $('#hotels').append(`<div class="row"><div class="col-12" id="total_title"><h3>Найдено отелей: ${ this.totalHotels }</h3></div></div>`);
             this.hotels = {};
@@ -85,7 +90,7 @@ export default function Search(selector = 'body') {
             }
             
             Promise.all(promises).then(() => {
-                $('#hotels').append('<div class="row container-fluid" id="hotels_result">');
+                $('#hotels').append('<div class="row"><div class="col-12"><div class="card-deck" id="hotels_result"></div></div></div<');
                 this.renderFilters();
                 this.renderHotels(); 
                 $('#search').attr('disabled', false);
@@ -277,11 +282,9 @@ export default function Search(selector = 'body') {
     }
     
     this.renderStars = stars => {
+        if(stars == 0) return '';
         let output = '<span class="center">';
-        if(stars == 0) output += 'Нет звезд';
-        else {
-            for(var i=0;i<stars;i++)output+='<span class="fa fa-star checked"></span>';
-        }
+        for(var i=0;i<stars;i++)output+='<span class="fa fa-star checked"></span>';
         output += '</span>';
         return output;
     }
@@ -323,7 +326,8 @@ export default function Search(selector = 'body') {
     this.renderHotels = (filter = () => true, add = false) => {
         $('#hotels_result').html('');
         let keys = Object.keys(this.hotels);
-        this.totalHotels = keys.length;
+        this.totalHotels = 0;
+        let output = ''
         for(var i = 0; i < keys.length; i++) {
             let key = keys[i];
             let hotel = this.hotels[key];
@@ -333,9 +337,16 @@ export default function Search(selector = 'body') {
                 rating: hotel.rating.total,
                 serps: hotel.serp_filters,
                 meals: hotel.rates.map(rate => rate.meal) })) {
-                $('#hotels_result').append(`
-                <div id="hotel-${hotel.id}-${Math.random()}" class="card col-12 col-sm-4" style="padding:5px;">
-                    <img src="${hotel.thumbnail}" class="card-img-top" alt="${hotel.name}">
+                this.totalHotels += 1;
+                
+                if(i % 3 === 0) {
+                    output += `<div class="row">`;
+                }
+                output += `
+                <div id="hotel-${hotel.id}-${Math.random()}" class="card col-12 col-md-4" style="padding:0px;">
+                    <div class="img-container">
+                        <img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" data-src="${hotel.thumbnail}" class="card-img-top lazyload" alt="${hotel.name}">
+                    </div>
                     <div class="card-body">
                         <h5 class="card-title">${hotel.name}</h5>
                         <p class="card-text">${hotel.address}</p>
@@ -344,20 +355,24 @@ export default function Search(selector = 'body') {
                             ${ this.renderStars(hotel.stars) }
                         </div>
                         <!--<a href="${!!hotel.hotelpage ? hotel.hotelpage : '#'}" target="blank" class="btn btn-primary form-control">Подробнее</a>-->
-                        <button type="button" class="btn btn-primary showmodal" data-id=${hotel.id}>
+                        <button type="button" class="btn btn-primary showmodal col-12" data-id=${hotel.id}>
                             Подробнее
                         </button>
                     </div>
-                </div>`);
+                </div>`;
+                if((i + 1) % 3 === 0) {
+                    output += `</div>`;
+                }
             }
         };
+        $('#hotels_result').html(output);
         $('.showmodal').click(({target}) => {
             let id = target.dataset.id;
             const { dates } = this.data;
             new ReserveService(this.hotels[id],  {
                 guests: this.roomSelect.getInfo(),
-                checkin : dates.in,
-                checkout : dates.out
+                checkin : this.correctCheckDate(dates.in),
+                checkout : this.correctCheckDate(dates.out)
             });
         })
         $('#total_title').html(`<h3>Найдено отелей: ${ this.totalHotels }</h3>`);
@@ -509,7 +524,7 @@ export default function Search(selector = 'body') {
 
     this.render = () => {
         let modalInfoBtn = `
-            <div class="container d-flex justify-content-end">
+            <div class="container d-flex justify-content-sm-end justify-content-center">
                 <button id="modalInfoBtn" class="btn btn-link">Информация/отмена бронирования</button>
             </div>
         `;
@@ -517,19 +532,19 @@ export default function Search(selector = 'body') {
         let searchForm = `<div class="container">
             <div class="container-fluid">
                 <div class="row search-panel">
-                    <div class="ui-widget col-12 col-sm-5">
+                    <div class="ui-widget col-12 col-lg-5">
                         <div class="cool-input">
                             <input class="form-control" id="dest" placeholder="Страна/город/отель" />
                         </div>
                     </div>
-                    <div class="dates col-12 col-sm-3">
+                    <div class="dates col-12 col-lg-3">
                         <div class="input-group">
-                            <input type="text" class="form-control" id="checkin_date" size="10" placeholder="Заезд" />
-                            <input type="text" class="form-control" id="checkout_date" size="10" placeholder="Выезд" />
+                            <input type="text" class="form-control" id="checkin_date" size="10" placeholder="Заезд" onfocus="blur();" />
+                            <input type="text" class="form-control" id="checkout_date" size="10" placeholder="Выезд" onfocus="blur();" />
                         </div>
                     </div>
-                    <div class="col-12 col-sm-2 brief-rooms" id="rooms"></div>
-                    <div class="col-12 col-sm-2">
+                    <div class="col-12 col-lg-2 brief-rooms" id="rooms"></div>
+                    <div class="col-12 col-lg-2">
                         <button class="form-control" id="search">Поиск</button>
                     </div>
                 </div>
@@ -570,17 +585,22 @@ export default function Search(selector = 'body') {
             select: (ev, ui) => {
                 ev.preventDefault();
                 $('#dest').val(ui.item.label);
+                $(this).blur();
                 this.data.dest = {
                     id: ui.item.value,
                     type: ui.item.type
                 }
             },
             source: this.getMulticomplete,
-            minLength: 2
+            minLength: 2,
+            open: (ev, ui) => {
+                $('.ui-autocomplete').css('width', `calc(${$('.ui-autocomplete-input').width()}px + 1.5rem)`)
+            }
         });
         this.createDatepicker = type => {
             $(`#check${type}_date`).datepicker({
                 minDate: new Date(),
+                autoSize: true,
                 dateFormat: "dd M, D",
                 onSelect: (dateText, inst) => {
                     if(type == 'in') {

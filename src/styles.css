@@ -41,7 +41,8 @@ input.form-control[readonly] {
 }
 
 .brief-rooms {
-    display: block;
+    display: flex;
+    flex-direction: column;
     width: 100%;
     font-size: 1rem;
     line-height: 1;
@@ -128,8 +129,38 @@ input.form-control[readonly] {
     line-height: 1rem;
     outline: none!important;
 }
+#hotels_result .card {
+    margin-bottom: 10px!important;
+}
 
-@media(max-width: 320px) {
+#hotels_result .card-img-top {
+    height:220px;
+}
+
+.ui-dialog-titlebar-close {
+    display: none;
+}
+
+.img-container {
+    height:220px;
+    line-height:220px;
+}
+/* #hotels_result .btn{
+    position: absolute;
+    bottom: 15px;
+    width: calc(100% - 2.5rem);
+} */
+
+.stage-1 .carousel {
+    margin-bottom: 10px!important;
+}
+
+#hotels_result .row {
+    margin:0;
+    width:100%;
+}
+
+@media(max-width: 960px) {
     /* #modalInfoBtn {
         position: absolute;
         top: 10px;
@@ -140,8 +171,34 @@ input.form-control[readonly] {
         flex-basis: calc(100% - 30px);
         margin: auto 15px;
     }
+    .search-panel input, .search-panel .brief-rooms {
+        margin-bottom: 5px!important;
+    }
 
     #carouselControls {
         width:100%!important;
+    }
+
+    .brief-rooms {
+        flex-direction: row;
+    }
+
+    .brief-rooms span {
+        padding: .4rem .4rem .4rem 0;
+    }
+}
+
+@media (min-width: 576px) {
+    #hotels_result .card {
+        margin:0;
+    }
+}
+
+@media (max-width: 540px) {
+    .ui-datepicker {
+        left: calc((100vw - 17em) / 2)!important;
+    }
+    #modalInfoBtn {
+        margin:auto;
     }
 }

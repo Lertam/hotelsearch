@@ -102,14 +102,16 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
             
         </div>`;
         } else if(this.stage === -1) {
+            let images_output = '';
+            this.hotel.images.forEach((img, ind) => images_output += `
+                <div class="carousel-item${ind == 0 ? ' active': ''}">
+                    <img class="d-block w-100" src="${img.url}" alt="">
+                </div>`
+            );
             output = `
                 <div id="carouselControls" class="carousel slide w-50 m-auto" data-ride="carousel">
                     <div class="carousel-inner">
-                        ${this.hotel.images.map((img, ind) => `
-                            <div class="carousel-item${ind == 0 ? ' active': ''}">
-                                <img class="d-block w-100" src="${img.url}" alt="First slide">
-                            </div>`
-                        )}
+                        ${images_output}
                     </div>
                     <a class="carousel-control-prev" href="#carouselControls" role="button" data-slide="prev">
                         <span class="carousel-control-prev-icon" aria-hidden="true"></span>
@@ -132,10 +134,10 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
                 output += `
                     <div class="card col-12 container-fluid stage-0${selected ? ' border-success' : ''}">
                         <div class="row">
-                            <div class="col-4">
+                            <div class="col-12 col-lg-4">
                                 ${!!rate.thumbnail_tmpl ? `<image class="card-img" src=${rate.thumbnail_tmpl.replace('{size}', 'x220')} />` : '' }
                             </div>
-                            <div class="col-8 card-body">
+                            <div class="col-12 col-lg-8 card-body">
                                 <h5 class="card-title">${rate.name}</h5>
                                 <p class="card-text">Тарифы от ${formatMoney(rate.minPrice)}</p>
                                 <div class="text-right">
@@ -146,16 +148,18 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
                     </div>`;
             });
         } else if(this.stage === 1) {
+            let images_output = '';
+            this.data.group.image_list_tmpl.forEach((img, ind) => images_output += `
+                <div class="carousel-item${ind == 0 ? ' active': ''} ">
+                    <img class="d-block w-100" src="${img.src_secure.replace('{size}','x220')}" alt="" />
+                </div>`
+            );
             output += `
                 <div class="col-12 container-fluid stage-1">
                     <h5>Вы выбрали ${this.data.group.name}.</h5>
                     <div id="carouselControls" class="carousel slide w-50 m-auto" data-ride="carousel">
                         <div class="carousel-inner">
-                            ${this.data.group.image_list_tmpl.map((img, ind) => `
-                                <div class="carousel-item${ind == 0 ? ' active': ''}">
-                                    <img class="d-block w-100" src="${img.src_secure.replace('{size}','x220')}" alt="First slide">
-                                </div>`
-                            )}
+                            ${images_output}
                         </div>
                         <a class="carousel-control-prev" href="#carouselControls" role="button" data-slide="prev">
                             <span class="carousel-control-prev-icon" aria-hidden="true"></span>
@@ -168,9 +172,14 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
                     </div>
                 </div>
             `;
+            let rendered_rates = 0;
             this.hotel.rates.map((rate, rateInd) => {
-                if(rate.room_group_id == this.data.group.room_group_id) output += this.renderRate(rate, rateInd, true, (this.data.rate !== null && this.data.rate.ind == rateInd));
+                if(rate.room_group_id == this.data.group.room_group_id) {
+                    rendered_rates += 1;
+                    output += this.renderRate(rate, rateInd, true, (this.data.rate !== null && this.data.rate.ind == rateInd));
+                }
             });
+            if(rendered_rates == 0) output += `<p>Похоже, в этом отеле нет номеров, доступных для бронирования через нашу систему.</p>`;
         } else if(this.stage === 2) {
             let roomsData = '';               
             const rooms = this.data.rooms;

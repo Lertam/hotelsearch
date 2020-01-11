@@ -48,7 +48,7 @@ export default function RoomSelect() {
             totalGuests += room.children.length
         });
         let totalRooms = this.rooms.length;
-        return `${totalRooms} комнат${getNoun(totalRooms, 'а','ы', '')}<br/> ${ totalGuests } гост${getNoun(totalGuests, 'ь', 'я', 'ей')}`;
+        return `<span>${totalRooms} комнат${getNoun(totalRooms, 'а','ы', '')}</span><span>${ totalGuests } гост${getNoun(totalGuests, 'ь', 'я', 'ей')}</span>`;
     }
     this.render = () => {
         let output = '<div class="d-flex justify-content-end"><button id="roomsClose" class="btnClose">&times;</button></div>';
@@ -96,7 +96,10 @@ export default function RoomSelect() {
             $('#dialog').dialog({
                 autoOpen: false,
                 position: { my: "left top", at: "left bottom", of: open_button},
-                title: ''
+                title: '',
+                open: (ev, ui) => {
+                    if($(window).width() < 540) $('.ui-dialog').css('left', `calc((100% - 300px) / 2)`);
+                }
             });
             $('.ui-dialog-titlebar').hide();
             $('#rooms').click(() => {
