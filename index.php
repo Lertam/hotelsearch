@@ -24,6 +24,7 @@ if(!is_dir(HOTELSEARCH_CACHE_DIR.'/static')) mkdir(HOTELSEARCH_CACHE_DIR.'/stati
 $mode = 'default';
 if(isset($_REQUEST['mode'])) $mode = $_REQUEST['mode'];
 if($mode == 'api') {
+    $hotelsPerPage = 15;
     header('Content-Type: application/json');
     require('api.php');
     $api = new API("2545:da7bdbcb-4179-4139-ace9-d63e66b345db");
@@ -178,211 +179,43 @@ if($mode == 'api') {
             $response = array(
                 'status' => 'ok',
                 'total_hotels' => count($hotels),
-                'hotels' => $hotels//array_slice($hotels, 30 * ($page - 1), 30)
+                'hotels' => array_slice($hotels, $hotelsPerPage * ($page - 1), $hotelsPerPage)
             );
             echo json_encode($response);
             break;
-        case 'getInfo':
-            $file = 'path-to-file';
-            if (filectime($file) > time() + $expire) {
-            // reload file and invalidate cache
-            } else if (file_exists($file)) {
-            // get from cache
-            } else {
-            // get file and save it to cache then return  
-            }
-            $data = $_REQUEST['data'];
-            $curl = curl_init();
-
-            curl_setopt_array($curl, array(
-                CURLOPT_URL => ($baseUrl."/api/affiliate/v2/hotel/list?data=".$data),
-                CURLOPT_USERPWD => $keys,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => "",
-                CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 0,
-                CURLOPT_FOLLOWLOCATION => false,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST => $method,
-            ));
-            
-            $response = curl_exec($curl);
-            $err = curl_error($curl);
-            
-            curl_close($curl);
-            
-            if ($err) {
-                echo json_encode(array('debug' => array('status' => 400), 'message' => "cURL Error #:" . $err));
-            } else {
-                echo $response;
-            }
-            break;
+        
         case "actualize":
             $data = $_REQUEST['data'];
             $hotel_id = $_REQUEST['hotel_id'];
-            $curl = curl_init();
-            curl_setopt_array($curl, array(
-                CURLOPT_URL => ($baseUrl."/api/affiliate/v2/hotelpage/".$hotel_id."?data=".$data),
-                CURLOPT_USERPWD => $keys,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => "",
-                CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 0,
-                CURLOPT_FOLLOWLOCATION => false,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST => $method,
-            ));
-            
-            $response = curl_exec($curl);
-            $err = curl_error($curl);
-            
-            curl_close($curl);
-            
-            if ($err) {
-                echo json_encode(array('debug' => array('status' => 400), 'message' => "cURL Error #:" . $err));
-            } else {
-                echo $response;
-            }
+            $response = $api->actualize($query);
+            echo json_encode($response);
             break;
         case 'reserve':
             $data = file_get_contents('php://input');
             $data = json_decode($data, true);
             $data['user_ip'] = $_SERVER['REMOTE_ADDR'];
             $data = json_encode($data);
-            $curl = curl_init();
-            curl_setopt_array($curl, array(
-                CURLOPT_URL => ($baseUrl."/api/affiliate/v2/order/reserve"),
-                CURLOPT_POST => true,
-                CURLINFO_HEADER_OUT => true,
-                CURLOPT_POSTFIELDS => $data,
-                CURLOPT_HTTPHEADER => array(                                                                          
-                    'Content-Type: application/json',                                                                                
-                    'Content-Length: ' . strlen($data)                                                                       
-                ),
-                CURLOPT_USERPWD => $keys,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => "",
-                CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 0,
-                CURLOPT_FOLLOWLOCATION => false,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1
-            ));
-            
-            $response = curl_exec($curl);
-            $err = curl_error($curl);
-            
-            curl_close($curl);
-            
-            if ($err) {
-                echo json_encode(array('debug' => array('status' => 400), 'message' => "cURL Error #:" . $err));
-            } else {
-                echo $response;
-            }
+            $response = $api->reserve($data);
+            echo json_encode($response);
             break;
         case 'status':
             $data = $_REQUEST['data'];
-            $curl = curl_init();
-
-            curl_setopt_array($curl, array(
-                CURLOPT_URL => ($baseUrl."/api/affiliate/v2/order/status?data=".$data),
-                CURLOPT_USERPWD => $keys,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => "",
-                CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 0,
-                CURLOPT_FOLLOWLOCATION => false,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST => $method,
-            ));
-            
-            $response = curl_exec($curl);
-            $err = curl_error($curl);
-            
-            curl_close($curl);
-            
-            if ($err) {
-                echo json_encode(array('debug' => array('status' => 400), 'message' => "cURL Error #:" . $err));
-            } else {
-                echo $response;
-            }
+            $response = $api->getStatus($data);
+            echo json_encode($response);
             break;
         case "reserve-list":
-            $curl = curl_init();
-            curl_setopt_array($curl, array(
-                CURLOPT_URL => ($baseUrl."/api/affiliate/v2/order/list"),
-                CURLOPT_USERPWD => $keys,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => "",
-                CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 0,
-                CURLOPT_FOLLOWLOCATION => false,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST => $method,
-            ));
-            
-            $response = curl_exec($curl);
-            $err = curl_error($curl);
-            
-            curl_close($curl);
-            
-            if ($err) {
-                echo json_encode(array('debug' => array('status' => 400), 'message' => "cURL Error #:" . $err));
-            } else {
-                echo $response;
-            }
+            $response = $api->getReserveList();
+            echo json_encode($response);
             break;
         case 'cancel':
             $id = $_REQUEST['partner_order_id'];
-            $curl = curl_init();
-
-            curl_setopt_array($curl, array(
-                CURLOPT_URL => ($baseUrl."/api/affiliate/v2/order/cancel?partner_order_id=".$id),
-                CURLOPT_USERPWD => $keys,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => "",
-                CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 0,
-                CURLOPT_FOLLOWLOCATION => false,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST => $method,
-            ));
-            
-            $response = curl_exec($curl);
-            $err = curl_error($curl);
-            
-            curl_close($curl);
-            
-            if ($err) {
-                echo json_encode(array('debug' => array('status' => 400), 'message' => "cURL Error #:" . $err));
-            } else {
-                echo $response;
-            }
+            $response = $api->cancellReserve($id);
+            echo json_encode($response);
             break;
         case 'reserve-info':
             $poid = $_REQUEST['partner_order_id'];
-            $curl = curl_init();
-
-            curl_setopt_array($curl, array(
-                CURLOPT_URL => ($baseUrl."/api/affiliate/v2/order/info?partner_order_id=$poid"),
-                CURLOPT_USERPWD => $keys,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => "",
-                CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 0,
-                CURLOPT_FOLLOWLOCATION => false,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST => $method,
-            ));
-            
-            $response = curl_exec($curl);
-            $err = curl_error($curl);
-            curl_close($curl);
-            
-            if ($err) {
-                echo json_encode(array('debug' => array('status' => 400), 'message' => "cURL Error #:" . $err));
-            } else {
-                echo $response;
-            }
+            $response = $api->getReserveInfo($poid);
+            echo json_encode($response);
             break;
         default:
             echo 'Unknown action';

@@ -6,7 +6,7 @@ class API {
         if(!isset($keys)) throw new Error('You must provide Ostrovok API keys for use this class.');
         $this->keys = $keys;
     }
-    private function makeApiRequest ($url) {
+    private function makeApiRequest ($url, $data = null) {
         $method = $_SERVER['REQUEST_METHOD'];
         $baseUrl = 'https://partner.ostrovok.ru';
         $curl = curl_init();
@@ -21,6 +21,12 @@ class API {
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
             CURLOPT_CUSTOMREQUEST => $method,
         ));
+        if($data != null) curl_setopt_array($ch, array(
+            CURLOPT_POSTFIELDS => $data,
+            CURLOPT_HTTPHEADER => array(                                                                          
+                'Content-Type: application/json',                                                                                
+                'Content-Length: ' . strlen($data)                                                                       
+            )));
         $response = curl_exec($curl);
         $err = curl_error($curl);
         
@@ -108,6 +114,30 @@ class API {
             }
             return $res;
         }
+    }
+
+    public function actualize($hotel_id, $data) {
+        return $this->makeApiRequest("/api/affiliate/v2/hotelpage/".$hotel_id."?data=".$data);
+    }
+
+    public function reserve($data) {
+        return $this->makeApiRequest("/api/affiliate/v2/order/reserve", $data);
+    }
+
+    public function getStatus($data) {
+        return $this->makeApiRequest("/api/affiliate/v2/order/status?data=".$data);
+    }
+
+    public function getReserveList() {
+        return $this->makeApiRequest("/api/affiliate/v2/order/list");
+    }
+
+    public function cancellReserve($id) {
+        return $this->makeApiRequest("/api/affiliate/v2/order/cancel?partner_order_id=".$id);
+    }
+
+    public function getReserveInfo($poid) {
+        return $this->makeApiRequest("/api/affiliate/v2/order/info?partner_order_id=$poid");
     }
 
     public static function getStaticFilename($id) {

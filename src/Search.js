@@ -6,6 +6,7 @@ import ReserveService from './ReserveService';
 import InfoService from './InfoService';
 
 export default function Search(selector = 'body') {
+    this.loadHotelsBtn = `<div class="row" id="loadBtnContainer"><div class="col-12 text-center"><button class="btn btn-primary" id="loadHotelsBtn">Показать еще</button><div class="row"><div class="col-12 text-center">`;
     let hash = document.location.hash.replace('#', '');
     this.hash_params = {};
     if(!!hash) {
@@ -17,7 +18,6 @@ export default function Search(selector = 'body') {
     };
     this.page = 1;
     if(!!this.hash_params.page && !isNaN(this.hash_params.page) && parseInt(this.hash_params.page) > 0) this.page = parseInt(this.hash_params.page);
-    this.loading = false;
     this.selector = selector;
     this.roomSelect = new RoomSelect(!!this.hash_params.search ? this.hash_params.search.rooms : [], rooms => {
         if(!this.hash_params.search) this.hash_params.search = {};
@@ -95,18 +95,13 @@ export default function Search(selector = 'body') {
         let res = arr.map(part => {if(part.length < 2) part = '0'+part;return part;});
         return res.join('-');
     }
-    this.getHotels = (add = true) => {
-        this.hotels = [];
+    this.addHotels = () => {
         const { dest, dates } = this.data
         let params = {
             rooms: this.roomSelect.getInfo(),
             dest, dates
         };
-        // if(dest.type === 'region') {
-        //     params.region_id = dest.id;
-        // } else if (dest.type === 'hotel') {
-        //     params.ids = [dest.id];
-        // }
+        this.page += 1;
         let curSettings = {
             ...this.settings,
             url: `${window.location.origin}${window.location.pathname}?mode=api&action=getHotels&data=${JSON.stringify(params)}&page=${this.page}`
@@ -118,7 +113,15 @@ export default function Search(selector = 'body') {
         if(serps.length > 0) curSettings.url += `&serps=${JSON.stringify(serps)}`;
         if(meals.length > 0) curSettings.url += `&meals=${JSON.stringify(meals)}`;
         if(prices.min !== 0 || prices.max !== 100000) curSettings.url += `&prices=${JSON.stringify(prices)}`;
-        $('#loading-hover').show();
+        $('#loadBtnContainer').replaceWith(`
+            <div class="row">
+                <div class="col-12 text-center" style="padding-top:50px;">
+                    <div class="spinner-border" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        `);
         $.ajax(curSettings).done(response => {
             if(response.status != 'ok') {
                 alert('error');
@@ -126,42 +129,65 @@ export default function Search(selector = 'body') {
                 return;
             }
             this.totalHotels = response.total_hotels;
+            
+            $('#search').attr('disabled', false);
+            
+            this.hotels = { ...this.hotels, ...response.hotels};
+            this.renderFilters();
+            this.renderHotels();
+        });//TODO: Add error catching
+    }
+    this.getHotels = () => {
+        this.page = 1;
+        this.hotels = {};
+        const { dest, dates } = this.data
+        let params = {
+            rooms: this.roomSelect.getInfo(),
+            dest, dates
+        };
+        let curSettings = {
+            ...this.settings,
+            url: `${window.location.origin}${window.location.pathname}?mode=api&action=getHotels&data=${JSON.stringify(params)}&page=${this.page}`
+        };
+
+        const { stars, ratings, serps, meals, prices } = this.filters;
+        if(stars.length > 0) curSettings.url += `&stars=${JSON.stringify(stars)}`;
+        if(ratings.length > 0) curSettings.url += `&ratings=${JSON.stringify(ratings)}`;
+        if(serps.length > 0) curSettings.url += `&serps=${JSON.stringify(serps)}`;
+        if(meals.length > 0) curSettings.url += `&meals=${JSON.stringify(meals)}`;
+        if(prices.min !== 0 || prices.max !== 100000) curSettings.url += `&prices=${JSON.stringify(prices)}`;
+        if($('#hotels').length > 0) {
+            $('#hotels').html(`
+                <div class="text-center" style="padding-top:50px;">
+                    <div class="spinner-border" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                </div>
+            `);
+        }
+        $.ajax(curSettings).done(response => {
+            if(response.status != 'ok') {
+                alert('error');
+                console.error(response.error);
+                return;
+            }
+            this.totalHotels = response.total_hotels;
+            
+            $('#search').attr('disabled', false);
             if($('#hotels').length == 0) {
                 $('.search-results').html(`
                     <div class="col-12 d-lg-none"><button class="btn btn-primary w-100" id="filtersBtn">Фильтр</button></div>
                     <div id="filters" class="d-none d-lg-flex flex-lg-column col-lg-3"></div>
                     <div id="hotels" class="col-12 col-lg-9"></div>
                 `);
-                $('#hotels').append('<div id="loading-hover"></div>');
                 $('#hotels').append(`<div class="row"><div class="col-12" id="total_title"><h3>Найдено отелей: ${ this.totalHotels }</h3></div></div>`);
                 $('#hotels').append('<div class="row col-12"><div class="col-12"><div class="card-deck" id="hotels_result"></div></div></div<');
             }
+            $('#hotels').html(`<div class="row"><div class="col-12" id="total_title"><h3>Найдено отелей: ${ this.totalHotels }</h3></div></div>`);
+            $('#hotels').append('<div class="row col-12"><div class="col-12"><div class="card-deck" id="hotels_result"></div></div></div<');
             this.hotels = response.hotels;
             this.renderFilters();
-            this.renderHotels(add);
-            $('#loading-hover').hide();
-            $('#search').attr('disabled', false);
-            // // this.hotels = {};
-            // // response.result.hotels.map(hotel => {
-            // //     let min_rate = 999999999;
-            // //     hotel.rates.forEach(rate => { let irate = parseInt(rate.rate_price); if(!isNaN(irate) && irate < min_rate) min_rate = irate;}); 
-            // //     this.hotels[hotel.id] = {
-            // //         min_rate,
-            // //         ...hotel
-            // //     };
-            // // });
-            // let ids = Object.keys(this.hotels);
-            // let promises = [];
-            // while(ids.length > 0) {
-            //     promises.push(this.getHotelInfo(ids.splice(0, 100)));
-            // }
-            
-            // Promise.all(promises).then(() => {
-            //     $('#hotels').append('<div class="row"><div class="col-12"><div class="card-deck" id="hotels_result"></div></div></div<');
-            //     this.renderFilters();
-            //     this.renderHotels(); 
-            //     $('#search').attr('disabled', false);
-            // });
+            this.renderHotels();
         });//TODO: Add error catching
     }
     this.renderFilters = (selector = '#filters') => {
@@ -367,58 +393,14 @@ export default function Search(selector = 'body') {
         output += '</span>';
         return output;
     }
-    this.filter = source => {
-        const { stars, prices, ratings, serps, meals } = this.filters;
-        if(stars.length == 0 && prices.min == 0 && prices.max == 100000 && ratings.length == 0 && serps.length == 0 && meals.length == 0) return true;
-        let filters_passed = 0;
-        let totalFilters = 0;
-        if(stars.length > 0) {
-            totalFilters += 1;
-            if(stars.indexOf(source.stars) !== -1 || (source.stars == 0 && stars.indexOf(1) !== -1)) filters_passed += 1;
-        }
-        if(ratings.length > 0) {
-            totalFilters += 1;
-            if(ratings.indexOf(source.rating) !== -1) filters_passed += 1;
-        }
-        if(serps.length > 0) {
-            totalFilters += 1;
-            let passed = 0;
-            serps.map(serp => { if(source.serps.indexOf(serp) !== -1) passed += 1;});
-            if(passed == serps.length) filters_passed += 1;
-        }
-        if(meals.length > 0) {
-            totalFilters += 1;
-            let passed = 0;
-            meals.map(meal => { if(source.meals.indexOf(meal) !== -1) passed += 1;});
-            if(passed == meals.length) filters_passed += 1;
-        }
-        if(prices.min !== null && !isNaN(prices.min)){
-            totalFilters += 1;
-            if(source.price >= prices.min) filters_passed += 1; 
-        }
-        if(prices.max !== null && !isNaN(prices.max)){
-            totalFilters += 1;
-            if(source.price <= prices.max) filters_passed += 1; 
-        }
-        if(filters_passed === totalFilters) return true;
-        else return false;
-    }
-    this.renderHotels = (add = true) => {
-        $('#hotels_result').html('');
+    this.renderHotels = (add = false) => {
+        if(!add) $('#hotels_result').html('');
         let keys = Object.keys(this.hotels);
-        // this.totalHotels = 0;
         let index = 0;
         let output = ''
         for(var i = 0; i < keys.length; i++) {
             let key = keys[i];
             let hotel = this.hotels[key];
-            // if(this.filter({ 
-            //     stars: hotel.stars, 
-            //     price: hotel.min_rate, 
-            //     rating: hotel.rating.total,
-            //     serps: hotel.serp_filters,
-            //     meals: hotel.rates.map(rate => rate.meal) })) {
-            //     this.totalHotels += 1;
             index += 1;
             if((index - 1) % 3 === 0) {
                 output += `<div class="row">`;
@@ -446,10 +428,14 @@ export default function Search(selector = 'body') {
             }
             // }
         };
-        if(add) $('#hotels_result').append(output);
-        else $('#hotels_result').html(output);
+        // 15 hotels per page
+        if(this.page * 15 <= this.totalHotels) output += this.loadHotelsBtn;
+        if(!add) $('#hotels_result').html(output);
+        else $('#loadBtnContainer').replaceWith(output);
+        $('#loadHotelsBtn').click(() => {
+            this.addHotels();
+        });
         $('.showmodal').click(({target}) => {
-            console.log(target);
             let id = target.dataset.id;
             const { dates } = this.data;
             new ReserveService(this.hotels[id],  {
@@ -481,21 +467,6 @@ export default function Search(selector = 'body') {
         }
         $('#total_title').html(`<h3>Найдено отелей: ${ this.totalHotels }</h3>`);
     }
-    // this.getHotelInfo = ids => {
-    //     return new Promise((resolve, reject) => {
-    //         let curSettings = {
-    //             // ...this.settings,
-    //             url: `${window.location.origin}${window.location.pathname}?mode=api&action=getInfo&data=${JSON.stringify({ ids })}`
-    //         };
-    //         $.ajax(curSettings).done(response => {
-    //             response.result.map(hotel => {
-    //                 Object.assign(this.hotels[hotel.id], hotel, { stars: Math.round(hotel.star_rating / 10) } );
-    //             });
-    //             resolve();
-    //         });
-    //     });
-    // };
-
     this.getMulticomplete = (req, callback) => {
         let curSettings = {
             ...this.settings,
