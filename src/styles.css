@@ -160,6 +160,18 @@ input.form-control[readonly] {
     width:100%;
 }
 
+#loading-hover {
+    width: 100%;
+    left: 0;
+    margin: auto;
+    height: 100%;
+    position: absolute;
+    background-color: grey;
+    z-index: 4;
+    opacity: .7;
+    margin-top: -10px;
+}
+
 @media(max-width: 960px) {
     /* #modalInfoBtn {
         position: absolute;
