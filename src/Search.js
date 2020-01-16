@@ -9,14 +9,15 @@ export default function Search(selector = 'body') {
     this.loadHotelsBtn = `<div class="row" id="loadBtnContainer"><div class="col-12 text-center"><button class="btn btn-primary" id="loadHotelsBtn">Показать еще</button><div class="row"><div class="col-12 text-center">`;
     let hash = document.location.hash.replace('#', '');
     this.hash_params = {};
+    this.page = 1;
     if(!!hash) {
-        this.hash_params = JSON.parse(hash.replace(/%22/g, '"').replace(/%20/g,' '));
+        this.hash_params = JSON.parse(decodeURI(hash));
     }
     this.settings = {
         "method": "GET",
         "timeout": 0,
     };
-    this.page = 1;
+    
     if(!!this.hash_params.page && !isNaN(this.hash_params.page) && parseInt(this.hash_params.page) > 0) this.page = parseInt(this.hash_params.page);
     this.selector = selector;
     this.roomSelect = new RoomSelect(!!this.hash_params.search ? this.hash_params.search.rooms : [], rooms => {
@@ -37,6 +38,7 @@ export default function Search(selector = 'body') {
             if(!!this.hash_params.filters.meals && this.hash_params.filters.meals.length == 0) delete this.hash_params.filters.meals;
             if(Object.keys(this.hash_params.filters).length == 0) delete this.hash_params.filters;
         }
+        this.hash_params.page = this.page;
         document.location.hash=`#${JSON.stringify(this.hash_params)}`;
     }
     this.data = {
@@ -64,7 +66,8 @@ export default function Search(selector = 'body') {
         prices: {min:0, max:100000},
         ratings: [],
         serps: [],
-        meals: []
+        meals: [],
+        name: null
     };
     if(!!this.hash_params.filters) {
         this.filters = { ...this.filters, ...this.hash_params.filters };
@@ -85,7 +88,8 @@ export default function Search(selector = 'body') {
             prices: {min:0, max:100000},
             ratings: [],
             serps: [],
-            meals: []
+            meals: [],
+            name: null
         };
         delete this.hash_params.filters;
         this.genHash();
@@ -102,6 +106,8 @@ export default function Search(selector = 'body') {
             dest, dates
         };
         this.page += 1;
+        this.hash_params.page = this.page;
+        this.genHash();
         let curSettings = {
             ...this.settings,
             url: `${window.location.origin}${window.location.pathname}?mode=api&action=getHotels&data=${JSON.stringify(params)}&page=${this.page}`
@@ -138,7 +144,6 @@ export default function Search(selector = 'body') {
         });//TODO: Add error catching
     }
     this.getHotels = () => {
-        this.page = 1;
         this.hotels = {};
         const { dest, dates } = this.data
         let params = {
@@ -150,11 +155,12 @@ export default function Search(selector = 'body') {
             url: `${window.location.origin}${window.location.pathname}?mode=api&action=getHotels&data=${JSON.stringify(params)}&page=${this.page}`
         };
 
-        const { stars, ratings, serps, meals, prices } = this.filters;
+        const { stars, ratings, serps, meals, prices, name } = this.filters;
         if(stars.length > 0) curSettings.url += `&stars=${JSON.stringify(stars)}`;
         if(ratings.length > 0) curSettings.url += `&ratings=${JSON.stringify(ratings)}`;
         if(serps.length > 0) curSettings.url += `&serps=${JSON.stringify(serps)}`;
         if(meals.length > 0) curSettings.url += `&meals=${JSON.stringify(meals)}`;
+        if(!!name) curSettings.url += `&hotel_name=${name}`;
         if(prices.min !== 0 || prices.max !== 100000) curSettings.url += `&prices=${JSON.stringify(prices)}`;
         if($('#hotels').length > 0) {
             $('#hotels').html(`
@@ -236,6 +242,10 @@ export default function Search(selector = 'body') {
         $(selector).html(`
             <div class="row">
                 <div class="col-12">
+                    <fieldset id="name_filter">
+                        <legent style="font-size:1.2rem;">Поиск по названию отеля</legend>
+                        <input type="text" class="form-control" id="name_filter-input" value="${!!this.filters.name ? this.filters.name : '' }" />
+                    </fieldset>
                     <fieldset id="star-filter">
                         <legend style="font-size:1.2rem;">Количество звезд </legend>
                         <label for="5-stars">
@@ -384,6 +394,12 @@ export default function Search(selector = 'body') {
             this.genHash();
             this.getHotels();
         });
+        $(`#name_filter-input`).change(({target}) => {
+            this.filters.name = target.value;
+            this.hash_params.filters = { ...this.hash_params.filters, name: this.filters.name };
+            this.genHash();
+            this.getHotels();
+        })
     }
     
     this.renderStars = stars => {
@@ -676,6 +692,7 @@ export default function Search(selector = 'body') {
                     type: ui.item.type
                 };
                 if(!this.hash_params.search) this.hash_params.search = {};
+                this.page = 1;
                 this.hash_params.search.dest = {
                     id: ui.item.value,
                     type: ui.item.type,
@@ -717,7 +734,6 @@ export default function Search(selector = 'body') {
         this.createDatepicker('out');
 
         $('#search').click(ev => {
-            this.page = 1;
             if(this.validateForm()) {
                 $('.search-results').html(`
                     <div class="text-center">
