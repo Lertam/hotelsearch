@@ -15,6 +15,7 @@ $_SESSION['LAST_ACTIVITY'] = time();
 if(!is_dir(HOTELSEARCH_CACHE_DIR)) mkdir(HOTELSEARCH_CACHE_DIR);
 if(!is_dir(HOTELSEARCH_CACHE_DIR.'/multicomplete')) mkdir(HOTELSEARCH_CACHE_DIR.'/multicomplete');
 if(!is_dir(HOTELSEARCH_CACHE_DIR.'/static')) mkdir(HOTELSEARCH_CACHE_DIR.'/static');
+if(!is_dir(HOTELSEARCH_CACHE_DIR.'/regions')) mkdir(HOTELSEARCH_CACHE_DIR.'/regions');
 
 // if(isset($_SESSION['search'])) {
 //     var_dump($_SESSION['search']);
@@ -64,48 +65,81 @@ if($mode == 'api') {
                 }
                 $hotels = array();
                 foreach($response['result']['hotels'] as $hotel) {
-                    $min_price = 99999999;
+                    $min_rate = array('rate_price' => '99999999' );
                     foreach($hotel['rates'] as $rate) {
-                        if(is_numeric($rate['rate_price'])) {
-                            if((int)$rate['rate_price'] < $min_price) $min_price = (int)$rate['rate_price'];
+                        if(is_numeric($rate['rate_price']) && is_numeric($min_rate['rate_price'])) {
+                            if((int)$rate['rate_price'] < (int)$min_rate['rate_price']) $min_rate = $rate;
                         }
                     }
                     $modified = $hotel;
-                    $modified['min_rate'] = $min_price;
-                    $hotels[$hotel['id']] = $modified;
+                    $modified['min_rate'] = $min_rate;
+                    $hotels[] = $modified;
                 }
                 $ids = array();
-                foreach($hotels as $id => $hotel) {
-                    $file = API::getStaticFilename($id);
-                    if(!file_exists($file)) $ids[] = $id;
+                foreach($hotels as $ind => $hotel) {
+                    $file = API::getStaticFilename($hotel['id']);
+                    if(!file_exists($file)) $ids[$hotel['id']] = array('ind' => $ind, 'id' => $hotel['id']);
                     else if (filectime($file) + $expire < time()) {
                         unlink($file);
-                        $ids[] = $id;
+                        $ids[$hotel['id']] = array('ind' => $ind, 'id' => $hotel['id']);
                     } else { //if (file_exists($file)) {
-                        $hotels[$id] = array_merge($hotels[$id], json_decode(file_get_contents($file), true));
+                        $hotels[$ind] = array_merge($hotels[$ind], json_decode(file_get_contents($file), true));
                     }
                 }
-                $info = $api->getInfo($ids);
+                $info = $api->getInfo(array_column($ids, 'id'));
                 if(count($ids) > 0 && count($ids) <= 100 && $info['debug']['status'] == 200) {
-                    foreach($info['result'] as $hotelInfo) {
+                    foreach($info['result'] as $id => $hotelInfo) {
                         $modified = $hotelInfo;
                         $modified['stars'] = round($hotelInfo['star_rating'] / 10);
                         $file = API::getStaticFilename($hotelInfo['id']);
-                        file_put_contents($file, json_encode($modified));
-                        $hotels[$hotelInfo['id']] = array_merge($hotels[$hotelInfo['id']], $modified);
+                        $hotels[$ids[$hotelInfo['id']]['ind']] = array_merge($hotels[$ids[$hotelInfo['id']]['ind']], $modified);
+                        file_put_contents($file, json_encode($hotels[$ids[$hotelInfo['id']]['ind']]));
                     }
                 } else if(count($ids) > 100 && $info['debug']['status'] == 200) {
                     foreach($info as $hotelInfo) {
                         $modified = $hotelInfo;
                         $modified['stars'] = round($hotelInfo['star_rating'] / 10);
                         $file = API::getStaticFilename($hotelInfo['id']);
-                        file_put_contents($file, json_encode($modified));
-                        $hotels[$hotelInfo['id']] = array_merge($hotels[$hotelInfo['id']], $modified);
+                        $hotels[$ids[$hotelInfo['id']]['ind']] = array_merge($hotels[$ids[$hotelInfo['id']]['ind']], $modified);
+                        file_put_contents($file, json_encode($hotels[$ids[$hotelInfo['id']]['ind']]));
                     }
                 }
+                usort($hotels, function($a, $b) {
+                    if ($a['sort_score'] == $b['sort_score']) {
+                        return 0;
+                    }
+                    return ($a['sort_score'] > $b['sort_score']) ? -1 : 1;
+                });
                 $_SESSION['hotels'] = $hotels;
             }
             $hotels = $_SESSION['hotels'];
+            $region_info = null;
+            if(isset($session_data['dest']['type']) && $session_data['dest']['type'] == 'region' && isset($session_data['dest']['id'])) {
+                $region_id = (int)$session_data['dest']['id'];
+                $filename = HOTELSEARCH_CACHE_DIR.'/regions/'.$region_id.'.json';
+                if(file_exists($filename)) {
+                    $region_info = json_decode(file_get_contents($filename), true);
+                } else {
+                    $response = $api->getRegionInfo($region_id);
+                    if($response['debug']['status'] == 200 && count($response['result']) > 0) {
+                        $region_info = $response['result'][0];
+                        file_put_contents($filename, json_encode($region_info));
+                    }
+                }
+            }
+            if($region_info != null && isset($region_info['center'])) {
+                $lat = (float)$region_info['center']['latitude'];
+                $lng = (float)$region_info['center']['longitude'];
+
+                // foreach($hotels as $hotel) {
+                // for($i = 0; $i < count($hotels); $i++) {
+                foreach($hotels as $i => $hotel) {
+                    $hotels[$i]['distance_from_center'] = API::findDistance(
+                        $lat, $lng, // City cords
+                        $hotel['latitude'], $hotel['longitude']
+                    );
+                }
+            }
             $hasLastPage = false;
             if(isset($_SESSION['last_page'])) {
                 $hasLastPage = true;
@@ -130,6 +164,9 @@ if($mode == 'api') {
             }
             if(isset($_REQUEST['hotel_name'])) {
                 $filter['hotel_name'] = $_REQUEST['hotel_name'];
+            }
+            if(isset($_REQUEST['distance'])) {
+                $filter['distance'] = $_REQUEST['distance'];
             }
             if(count($filter) > 0) {
                 // Need filtering
@@ -181,6 +218,11 @@ if($mode == 'api') {
                         $totalFilters++;
                         $name = $filter['hotel_name'];
                         if(preg_match("/.*$name.*/", $hotel['name'])) $filters_passed++;
+                    }
+                    if(isset($filter['distance']) && is_numeric($filter['distance']) && (int)$filter['distance'] > 0) {
+                        $totalFilters++;
+                        $distance = (int)$filter['distance'];
+                        if($hotel['distance_from_center'] <= $distance) $filters_passed++;
                     }
                     if($filters_passed === $totalFilters) $res[] = $hotel;
                 }
@@ -246,7 +288,8 @@ if($mode == 'api') {
             <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
             <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
             <script defer src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+            <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"> -->
+            <script defer src="https://kit.fontawesome.com/4287d8aada.js" crossorigin="anonymous"></script>
             <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
             <script defer src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.9.0/slick.min.css" integrity="sha256-UK1EiopXIL+KVhfbFa8xrmAWPeBjMVdvYMYkTAEv/HI=" crossorigin="anonymous" />

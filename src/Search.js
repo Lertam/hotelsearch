@@ -1,9 +1,12 @@
-import { isBlank, formatMoney } from './Utils';
+import { isBlank, formatMoney, formatDistance, getIcon } from './Utils';
 import serps from './serps.json';
 import meals from './meals.json';
 import RoomSelect from './RoomSelect';
 import ReserveService from './ReserveService';
 import InfoService from './InfoService';
+
+const MIN_PRICE = 100;
+const MAX_PRICE = 10000;
 
 export default function Search(selector = 'body') {
     this.loadHotelsBtn = `<div class="row" id="loadBtnContainer"><div class="col-12 text-center"><button class="btn btn-primary" id="loadHotelsBtn">Показать еще</button><div class="row"><div class="col-12 text-center">`;
@@ -25,22 +28,7 @@ export default function Search(selector = 'body') {
         this.hash_params.search.rooms = rooms;
         this.genHash();
     });
-    this.genHash = () => {
-        console.log('New hash', this.hash_params);
-        if(!!this.hash_params.filters) {
-            if(!!this.hash_params.filters.stars && this.hash_params.filters.stars.length == 0) delete this.hash_params.filters.stars;
-            if(!!this.hash_params.filters.ratings && this.hash_params.filters.ratings.length == 0) delete this.hash_params.filters.ratings;
-            if(!!this.hash_params.filters.prices) {
-                if(!!this.hash_params.prices.min == 0) delete this.hash_params.filters.prices.min;
-                if(!!this.hash_params.prices.max == 100000) delete this.hash_params.filters.prices.max;
-            }
-            if(!!this.hash_params.filters.serps && this.hash_params.filters.serps.length == 0) delete this.hash_params.filters.serps;
-            if(!!this.hash_params.filters.meals && this.hash_params.filters.meals.length == 0) delete this.hash_params.filters.meals;
-            if(Object.keys(this.hash_params.filters).length == 0) delete this.hash_params.filters;
-        }
-        this.hash_params.page = this.page;
-        document.location.hash=`#${JSON.stringify(this.hash_params)}`;
-    }
+    
     this.data = {
         dest: { type: "", id:"" },
         dates: { in: "", out: "" }
@@ -63,16 +51,18 @@ export default function Search(selector = 'body') {
     this.hotels = {};
     this.filters = {
         stars: [],
-        prices: {min:0, max:100000},
+        prices: {min:MIN_PRICE, max:MAX_PRICE},
         ratings: [],
         serps: [],
         meals: [],
-        name: null
+        name: null,
+        distance: 0
     };
     if(!!this.hash_params.filters) {
+        console.log('Old', this.filters);
         this.filters = { ...this.filters, ...this.hash_params.filters };
+        console.log('New', this.filters, this.hash_params.filters);
     }
-    this.genHash();
 
     this.getRegionIcon = type => {
         return type; //TODO: Release this function
@@ -85,14 +75,33 @@ export default function Search(selector = 'body') {
         this.hotels = {};
         this.filters = {
             stars: [],
-            prices: {min:0, max:100000},
+            prices: {min:MIN_PRICE, max:MAX_PRICE},
             ratings: [],
             serps: [],
             meals: [],
             name: null
         };
-        delete this.hash_params.filters;
         this.genHash();
+    }
+    this.genHash = () => {
+        if(!!this.hash_params.filters) delete this.hash_params.filters;
+        this.hash_params.filters = { ...this.filters, prices: { ...this.filters.prices }};
+        const { stars, ratings, prices, serps, meals, name, distance } = this.hash_params.filters;
+        if(!!stars && stars.length === 0) delete this.hash_params.filters.stars;
+        if(!!ratings && ratings.length === 0) delete this.hash_params.filters.ratings;
+        if(!!prices) {
+            if(!!prices.min && prices.min === MIN_PRICE) delete this.hash_params.filters.prices.min;
+            if(!!prices.max && prices.max === MAX_PRICE) delete this.hash_params.filters.prices.max;
+            if(Object.keys(this.hash_params.filters.prices).length == 0) delete this.hash_params.filters.prices;
+        }
+        if(!!serps && serps.length === 0) delete this.hash_params.filters.serps;
+        if(!!meals && meals.length === 0) delete this.hash_params.filters.meals;
+        if(name === null || name === '') delete this.hash_params.filters.name;
+        if(distance === 0) delete this.hash_params.filters.distance; 
+        if(Object.keys(this.hash_params.filters).length === 0) delete this.hash_params.filters;
+        this.hash_params.page = this.page;
+        console.log('New hash', this.hash_params, this.filters);
+        document.location.hash=`#${JSON.stringify(this.hash_params)}`;
     }
     this.correctCheckDate = (dat) => {
         let arr = dat.split('-');
@@ -106,19 +115,21 @@ export default function Search(selector = 'body') {
             dest, dates
         };
         this.page += 1;
-        this.hash_params.page = this.page;
+        // this.hash_params.page = this.page;
         this.genHash();
         let curSettings = {
             ...this.settings,
             url: `${window.location.origin}${window.location.pathname}?mode=api&action=getHotels&data=${JSON.stringify(params)}&page=${this.page}`
         };
 
-        const { stars, ratings, serps, meals, prices } = this.filters;
+        const { stars, ratings, serps, meals, prices, name, distance } = this.filters;
         if(stars.length > 0) curSettings.url += `&stars=${JSON.stringify(stars)}`;
         if(ratings.length > 0) curSettings.url += `&ratings=${JSON.stringify(ratings)}`;
         if(serps.length > 0) curSettings.url += `&serps=${JSON.stringify(serps)}`;
         if(meals.length > 0) curSettings.url += `&meals=${JSON.stringify(meals)}`;
-        if(prices.min !== 0 || prices.max !== 100000) curSettings.url += `&prices=${JSON.stringify(prices)}`;
+        if(prices.min !== MIN_PRICE || prices.max !== MAX_PRICE) curSettings.url += `&prices=${JSON.stringify(prices)}`;
+        if(!!name) curSettings.url += `&hotel_name=${name}`;
+        if(!!distance && distance > 0) curSettings.url += `&distance=${distance}`;
         $('#loadBtnContainer').replaceWith(`
             <div class="row">
                 <div class="col-12 text-center" style="padding-top:50px;">
@@ -138,7 +149,7 @@ export default function Search(selector = 'body') {
             
             $('#search').attr('disabled', false);
             
-            this.hotels = { ...this.hotels, ...response.hotels};
+            this.hotels = [ ...this.hotels, ...response.hotels ];
             this.renderFilters();
             this.renderHotels();
         });//TODO: Add error catching
@@ -155,13 +166,14 @@ export default function Search(selector = 'body') {
             url: `${window.location.origin}${window.location.pathname}?mode=api&action=getHotels&data=${JSON.stringify(params)}&page=${this.page}`
         };
 
-        const { stars, ratings, serps, meals, prices, name } = this.filters;
+        const { stars, ratings, serps, meals, prices, name, distance } = this.filters;
         if(stars.length > 0) curSettings.url += `&stars=${JSON.stringify(stars)}`;
         if(ratings.length > 0) curSettings.url += `&ratings=${JSON.stringify(ratings)}`;
         if(serps.length > 0) curSettings.url += `&serps=${JSON.stringify(serps)}`;
         if(meals.length > 0) curSettings.url += `&meals=${JSON.stringify(meals)}`;
         if(!!name) curSettings.url += `&hotel_name=${name}`;
-        if(prices.min !== 0 || prices.max !== 100000) curSettings.url += `&prices=${JSON.stringify(prices)}`;
+        if(!!distance && distance > 0) curSettings.url += `&distance=${distance}`;
+        if((prices.min !== MIN_PRICE || prices.max !== MAX_PRICE) && Object.keys(prices).length > 0) curSettings.url += `&prices=${JSON.stringify(prices)}`;
         if($('#hotels').length > 0) {
             $('#hotels').html(`
                 <div class="text-center" style="padding-top:50px;">
@@ -173,8 +185,8 @@ export default function Search(selector = 'body') {
         }
         $.ajax(curSettings).done(response => {
             if(response.status != 'ok') {
-                alert('error');
-                console.error(response.error);
+                // alert('error');
+                console.error(response);
                 return;
             }
             this.totalHotels = response.total_hotels;
@@ -187,10 +199,10 @@ export default function Search(selector = 'body') {
                     <div id="hotels" class="col-12 col-lg-9"></div>
                 `);
                 $('#hotels').append(`<div class="row"><div class="col-12" id="total_title"><h3>Найдено отелей: ${ this.totalHotels }</h3></div></div>`);
-                $('#hotels').append('<div class="row col-12"><div class="col-12"><div class="card-deck" id="hotels_result"></div></div></div<');
+                $('#hotels').append('<div class="row"><div class="col-12"><div id="hotels_result"></div></div></div<');
             }
             $('#hotels').html(`<div class="row"><div class="col-12" id="total_title"><h3>Найдено отелей: ${ this.totalHotels }</h3></div></div>`);
-            $('#hotels').append('<div class="row col-12"><div class="col-12"><div class="card-deck" id="hotels_result"></div></div></div<');
+            $('#hotels').append('<div class="row"><div class="col-12"><div id="hotels_result"></div></div></div<');
             this.hotels = response.hotels;
             this.renderFilters();
             this.renderHotels();
@@ -283,8 +295,16 @@ export default function Search(selector = 'body') {
             </div>
             <div class="row">
                 <div class="col-12">
+                    <fieldset id="distance-filter">
+                        <legend style="font-size:1.2rem;">Расстояние до центра - ${ this.filters.distance == 0 ? 'неважно' : `до ${this.filters.distance} км.` }</legend>
+                        <div id="distance-range"></div>
+                    </fieldset>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
                     <fieldset id="price-filter">
-                        <legend style="font-size:1.2rem;">Цена за ночь: ${formatMoney(this.filters.prices.min, 0)} - ${formatMoney(this.filters.prices.max, 0)}</legend>
+                        <legend style="font-size:1.2rem;">Цена за ночь: ${formatMoney(this.filters.prices.min, 0)}&nbsp;-&nbsp;${formatMoney(this.filters.prices.max, 0)}</legend>
                         <div id="price-range"></div>
                     </fieldset>
                 </div>
@@ -335,18 +355,38 @@ export default function Search(selector = 'body') {
         `);
         $( "#price-range" ).slider({
             range: true,
-            min: 0, // TODO: ?change to 100
-            max: 100000,
+            min: MIN_PRICE, // TODO: ?change to 100
+            max: MAX_PRICE,
             values: [ this.filters.prices.min, this.filters.prices.max ],
             step: 100,
             change: (event, ui) => {
               this.filters.prices.min = parseInt(ui.values[0]);
               this.filters.prices.max = parseInt(ui.values[1]);
-              if(!!this.hash_params.filter && !!this.hash_params.filters.prices) {
-                this.hash_params.filters = { ...this.hash_params.filters, prices: { ...this.hash_params.filter.prices, min: parseInt(ui.values[0]) } };
-                this.hash_params.filters = { ...this.hash_params.filters, prices: { ...this.hash_params.filter.prices, max: parseInt(ui.values[1]) } };
-              }
+              this.page = 1;
+            //   if(!!this.hash_params.filter && !!this.hash_params.filters.prices) {
+            //     this.hash_params.filters = { ...this.hash_params.filters, prices: { ...this.hash_params.filter.prices, min: parseInt(ui.values[0]) } };
+            //     this.hash_params.filters = { ...this.hash_params.filters, prices: { ...this.hash_params.filter.prices, max: parseInt(ui.values[1]) } };
+            //   }
               this.genHash();
+              this.getHotels();
+            }
+        });
+        $( "#distance-range" ).slider({
+            min: 0,
+            max: 50,
+            value: this.filters.distance,
+            step: 2,
+            change: (event, ui) => {
+                this.filters.distance = ui.value;
+                this.page = 1;
+            //   this.filters.prices.min = parseInt(ui.values[0]);
+            //   this.filters.prices.max = parseInt(ui.values[1]);
+            //   if(!!this.hash_params.filter && !!this.hash_params.filters.distance && ui.value > 0) {
+            //     this.hash_params.filters = { ...this.hash_params.filters, distance: ui.value };
+            //   }
+            //   console.log('Distance', ui, this.filters);
+              this.genHash();
+            //   this.renderFilters();
               this.getHotels();
             }
         });
@@ -357,7 +397,8 @@ export default function Search(selector = 'body') {
             let id = parseInt(target.dataset.id);
             if(this.filters.stars.indexOf(id) == -1) this.filters.stars.push(id);
             else this.filters.stars.splice(this.filters.stars.indexOf(id), 1);
-            this.hash_params.filters = { ...this.hash_params.filters, stars: this.filters.stars };
+            this.page = 1;
+            // this.hash_params.filters = { ...this.hash_params.filters, stars: this.filters.stars };
             this.genHash();
             this.getHotels()
         });
@@ -368,7 +409,8 @@ export default function Search(selector = 'body') {
             let id = parseInt(target.dataset.id);
             if(this.filters.ratings.indexOf(id) == -1) this.filters.ratings.push(id);
             else this.filters.ratings.splice(this.filters.ratings.indexOf(id), 1);
-            this.hash_params.filters = { ...this.hash_params.filters, ratings: this.filters.ratings };
+            // this.hash_params.filters = { ...this.hash_params.filters, ratings: this.filters.ratings };
+            this.page = 1;
             this.genHash();
             this.getHotels();
         });
@@ -379,7 +421,8 @@ export default function Search(selector = 'body') {
             let slug = target.id;
             if(this.filters.serps.indexOf(slug) == -1) this.filters.serps.push(slug);
             else this.filters.serps.splice(this.filters.serps.indexOf(slug), 1);
-            this.hash_params.filters = { ...this.hash_params.filters, serps: this.filters.serps };
+            // this.hash_params.filters = { ...this.hash_params.filters, serps: this.filters.serps };
+            this.page = 1;
             this.genHash();
             this.getHotels();
         });
@@ -390,59 +433,84 @@ export default function Search(selector = 'body') {
             let slug = target.id;
             if(this.filters.meals.indexOf(slug) == -1) this.filters.meals.push(slug);
             else this.filters.meals.splice(this.filters.meals.indexOf(slug), 1);
-            this.hash_params.filters = { ...this.hash_params.filters, meals: this.filters.meals };
+            this.page = 1;
+            // this.hash_params.filters = { ...this.hash_params.filters, meals: this.filters.meals };
             this.genHash();
             this.getHotels();
         });
         $(`#name_filter-input`).change(({target}) => {
             this.filters.name = target.value;
-            this.hash_params.filters = { ...this.hash_params.filters, name: this.filters.name };
+            this.page = 1;
+            // if(this.filters.name.length > 0) this.hash_params.filters = { ...this.hash_params.filters, name: this.filters.name };
             this.genHash();
             this.getHotels();
         })
     }
     
     this.renderStars = stars => {
-        if(stars == 0) return '';
-        let output = '<span class="center">';
+        // if(stars == 0) return '';
+        let output = '<span class="stars">';
         for(var i=0;i<stars;i++)output+='<span class="fa fa-star checked"></span>';
         output += '</span>';
         return output;
     }
     this.renderHotels = (add = false) => {
         if(!add) $('#hotels_result').html('');
-        let keys = Object.keys(this.hotels);
         let index = 0;
         let output = ''
-        for(var i = 0; i < keys.length; i++) {
-            let key = keys[i];
-            let hotel = this.hotels[key];
+        for(var i = 0; i < this.hotels.length; i++) {
+            let hotel = this.hotels[i];
             index += 1;
-            if((index - 1) % 3 === 0) {
-                output += `<div class="row">`;
-            }
+            // if((index - 1) % 3 === 0) {
+            //     output += `<div class="row">`;
+            // }
+            let serps_output = '';
+            hotel.serp_filters.forEach(serp => {
+                let icon = getIcon(serp);
+                if(icon) serps_output += `<i class="${icon.class}" title="${icon.title}"></i>`;
+            });
+            let rate = hotel.rates.filter(rate => parseInt(rate.rate_price) == hotel.min_rate);
+            console.log(rate);
             output += `
-            <div id="hotel-${hotel.id}}" class="card col-12 col-md-4" style="padding:0px;">
-                <div class="img-container">
-                    <img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" data-src="${hotel.thumbnail}" class="card-img-top lazyload" alt="${hotel.name}">
-                </div>
-                <div class="card-body">
-                    <h5 class="card-title">${hotel.name}</h5>
-                    <p class="card-text">${hotel.address}</p>
-                    <div class="price-block">
-                        <span class="center">${!!hotel.min_rate ? `От ${ formatMoney(hotel.min_rate)}` : '' }</span>
-                        ${ this.renderStars(hotel.stars) }
+            <div class="row">
+                <div id="hotel-${hotel.id}}" class="mycard card col-12" style="padding:0px;">
+                    <div class="img-container col-12 col-md-4">
+                        <img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" data-src="${hotel.thumbnail}" class="card-img-top lazyload" alt="${hotel.name}">
                     </div>
-                    <!--<a href="${!!hotel.hotelpage ? hotel.hotelpage : '#'}" target="blank" class="btn btn-primary form-control">Подробнее</a>-->
-                    <button type="button" class="btn btn-primary showmodal col-12" data-id=${hotel.id}>
-                        Подробнее
-                    </button>
+                    <div class="card-body">
+                        <div class="header d-flex flex-row">
+                            <div class="left d-flex flex-column col-8">
+                                ${ this.renderStars(hotel.stars) }
+                                <span class="title">${hotel.name}</span>
+                                <span class="address">${hotel.address}</span>
+                                <span class="address">${formatDistance(hotel.distance_from_center)}</span>
+                            </div>
+                            <div class="right col-4 d-flex flex-column align-items-end justify-content-end">
+                                ${ hotel.rating.total ? `<div class="rating-flag d-flex justify-content-center align-items-center total-${Math.round(hotel.rating.total)}">${hotel.rating.total}</div>` : '' }
+                                <div class="serps d-flex">${ serps_output }</div>
+                            </div>
+                        </div>
+                        <div class="content"></div>
+                        <div class="footer">
+                        <button type="button" class="btn btn-primary showmodal col-12" data-ind=${i}>
+                            Подробнее
+                        </button>
+                        </div>
+                    </div>
                 </div>
             </div>`;
-            if(index % 3 === 0 || index == Object.keys(this.hotels).length) {
-                output += `</div>`;
-            }
+            // if(index % 3 === 0 || index == this.hotels.length) {
+            //     output += `</div>`;
             // }
+            // <div class="price-block">
+            //                 <span class="center">${!!hotel.min_rate ? `От ${ formatMoney(hotel.min_rate)}` : '' }</span>
+                            
+            //             </div>
+            //             <p>Около ${ Math.round(hotel.distance_from_center * 100) / 100 } км до центра.</p>
+            //             <!--<a href="${!!hotel.hotelpage ? hotel.hotelpage : '#'}" target="blank" class="btn btn-primary form-control">Подробнее</a>-->
+            //             <button type="button" class="btn btn-primary showmodal col-12" data-id=${hotel.id}>
+            //                 Подробнее
+            //             </button>
         };
         // 15 hotels per page
         if(this.page * 15 <= this.totalHotels) output += this.loadHotelsBtn;
@@ -452,14 +520,14 @@ export default function Search(selector = 'body') {
             this.addHotels();
         });
         $('.showmodal').click(({target}) => {
-            let id = target.dataset.id;
+            let ind = target.dataset.ind;
             const { dates } = this.data;
-            new ReserveService(this.hotels[id],  {
+            new ReserveService(this.hotels[ind],  {
                 guests: this.roomSelect.getInfo(),
                 checkin : this.correctCheckDate(dates.in),
                 checkout : this.correctCheckDate(dates.out)
             });
-            this.hash_params.modal_open=id;
+            this.hash_params.modal_open=this.hotels[ind].id;
             $('#modalReserve').on('hidden.bs.modal', () => {
                 delete this.hash_params.modal_open;
                 this.genHash();
@@ -469,12 +537,15 @@ export default function Search(selector = 'body') {
         if(!!this.hash_params.modal_open) {
             let id = this.hash_params.modal_open;
             const { dates } = this.data;
-            new ReserveService(this.hotels[id],  {
-                guests: this.roomSelect.getInfo(),
-                checkin : this.correctCheckDate(dates.in),
-                checkout : this.correctCheckDate(dates.out)
-            });
-            this.hash_params.modal_open=id;
+            let hotel = this.hotels.map(hotel => hotel['id'] === id);
+            if(hotel.length > 0) {
+                new ReserveService(hotel[0],  {
+                    guests: this.roomSelect.getInfo(),
+                    checkin : this.correctCheckDate(dates.in),
+                    checkout : this.correctCheckDate(dates.out)
+                });
+            }
+            this.hash_params.modal_open = id;
             $('#modalReserve').on('hidden.bs.modal', () => {
                 delete this.hash_params.modal_open;
                 this.genHash();
@@ -499,7 +570,6 @@ export default function Search(selector = 'body') {
             callback(result);
         });//TODO: Add error catching
     }
-
     this.validateForm = () => {
         const { data } = this;
         const { dest, dates } = data;

@@ -120,6 +120,15 @@ class API {
         return $this->makeApiRequest("/api/affiliate/v2/hotelpage/".$hotel_id."?data=".$data);
     }
 
+    public function getRegionInfo($region_id) {
+        $data = json_encode(array(
+            'last_id' => $region_id  - 1,
+            'limit' => 1,
+            // 'types' => 'city'
+        ));
+        return $this->makeApiRequest("/api/affiliate/v2/region/list?data=".$data);
+    }
+
     public function reserve($data) {
         return $this->makeApiRequest("/api/affiliate/v2/order/reserve", $data);
     }
@@ -148,5 +157,9 @@ class API {
         if(!is_dir($path . $hash)) mkdir($path . $hash);
         $path .= ($hash . '/');
         return $path.$id.'.json';
+    }
+
+    public static function findDistance($x1, $y1, $x2, $y2) {
+        return 111 * sqrt(($x1-$x2)*($x1-$x2) + ($y1-$y2)*($y1-$y2));
     }
 }
