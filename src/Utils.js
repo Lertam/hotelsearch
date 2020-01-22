@@ -61,6 +61,55 @@ export const formatDate = dateStr => {
     return `${(hours < 10 ? ` 0${hours}` : hours)}:${(minutes < 10 ? ` 0${minutes}` : minutes)} ${(day < 10 ? ` 0${day}` : day)}.${(month < 10 ? ` 0${month}` : month)}.${year}`;
 };
 
+export const formatDistance = distance => {
+    let output = '';
+    if(distance >= 1) output += `${Math.round(distance * 10)/10}км`;
+    else output += `${Math.round(distance * 1000)}м`;
+    output += ' от центра города';
+    return output;
+}
+
+export const getIcon = serp => {
+    switch(serp){
+        case 'has_parking':
+            return { class: 'fas fa-parking', title: 'Парковка' };
+        case 'has_meal':
+            return { class: 'fas fa-utensils', title: 'Бар или ресторан' };
+        case 'air-conditioning':
+            return { class: 'fas fa-fan', title: 'Кондиционер' };
+        case 'has_internet':
+            return { class: 'fas fa-wifi', title: 'Бесплатный интернет' };
+        case 'has_kids':
+            return { class: 'fas fa-baby-carriage', title: 'Подходит для детей' };
+        case 'has_pool':
+            return { class: 'fas fa-swimming-pool', title: 'Бассейн' };
+        case 'has_spa':
+            return { class: 'fas fa-spa', title: 'Спа-услуги' };
+        case 'has_smoking':
+            return { class: 'fas fa-smoking', title: 'Можно курить' };
+        case 'has_airport_transfer':
+            return { class: 'fas fa-taxi', title: 'Трансфер' };
+        case 'has_fitness':
+            return { class: 'fas fa-heartbeat', title: 'Фитнес' };
+        case 'has_busyness':
+            return { class: 'fas fa-user-tie', title: 'Конференц-зал' };
+        case 'has_ski':
+            return { class: 'fas fa-skiing', title: 'Горнолыжный склон рядом' };
+        // case 'beach':
+        //     return { class: 'fas fa-umbrella-beach', title: 'Пляж рядом' };
+        // case 'private-bathroom':
+        //     return { class: 'fas fa-toilet', title: 'Ванная комната в номере' };
+        // case 'window':
+        //     return { class: 'fas fa-window-maximize', title: 'Окно в номере' };
+        case 'has_pets':
+            return { class: 'fas fa-paw', title: 'Разрешено с домашними животными' };
+        case 'has_disabled_support':
+            return { class: 'fas fa-blind', title: 'Для гостей с ограниченными возможностями' };
+        default:
+            return false;
+    }
+}
+
 export const mapMeal = (meal_slug) => {
     let meal_title = meal_slug;
     meals.forEach((meal) => {

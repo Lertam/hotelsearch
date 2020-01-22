@@ -137,14 +137,131 @@ input.form-control[readonly] {
     height:220px;
 }
 
+#hotels_result .mycard{
+    flex-direction: row;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    border: none;
+}
+
+#hotels_result .mycard .card-img-top {
+    border-bottom-left-radius: calc(.25rem - 1px);
+    border-top-right-radius: inherit;
+    object-fit: cover;
+}
+
+#hotels_result .mycard .card-body {
+    padding: inherit;
+}
+.mycard .stars {
+    height: .7rem;
+    font-size: .7rem;
+}
+
+.mycard .title {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.mycard .address {
+    font-size: .8rem;
+}
+
+.mycard .header {
+    border-bottom: 1px solid rgba(0,0,0,0.09);
+    height: 40%;
+    margin-left: 15px;
+    margin-right: 15px
+}
+
+.mycard .header>div {
+    padding: 0;
+    float:right;
+}
+
+.mycard .content {
+    border-bottom: 1px solid rgba(0,0,0,0.09);
+    height: 40%;
+    margin-left: 15px;
+    margin-right: 15px
+}
+
+.mycard .footer {
+    padding:10px;
+}
+
+.mycard .rating-flag {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    box-sizing: border-box;
+    color: #fff;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    right: 5px;
+    min-width: 32px;
+    padding: 13px 0 18px;
+    position: absolute;
+    text-align: center;
+    text-decoration: none;
+    top: -5px;
+    font-size: 17px;
+    min-width: 36px;
+    padding: 13px 0 23px;
+    right: 0;
+    background-color: red;
+}
+
+.mycard .total-10 {background-image: linear-gradient(-135deg, #53a30a 0%, #488f08 100%);}
+.mycard .total-9 {background-image: linear-gradient(-135deg, #59a008 0%, #4b8707 100%);}
+.mycard .total-8 {background-image: linear-gradient(-135deg, #85ac04 0%, #709103 100%);}
+.mycard .total-7 {background-image: linear-gradient(-135deg, #abb501 0%, #949c02 100%);}
+.mycard .total-6 {background-image: linear-gradient(-135deg, #b9a700 0%, #a19100 100%);}
+.mycard .total-5 {background-image: linear-gradient(-135deg, #c89800 0%, #ad8500 100%);}
+.mycard .total-4 {background-image: linear-gradient(-135deg, #cc8300 0%, #b37400 100%);}
+.mycard .total-3 {background-image: linear-gradient(-135deg, #b95e00 0%, #a15000 100%);}
+.mycard .total-2 {background-image: linear-gradient(-135deg, #a53500 0%, #8c2c00 100%);}
+.mycard .total-1 {background-image: linear-gradient(-135deg, #8b0100 0%, #730000 100%);}
+
+.mycard .rating-flag:before {
+    border-bottom: 4px solid #fff;
+    border-left: 16px solid transparent;
+    border-right: 16px solid transparent;
+    border-top: 40px solid transparent;
+    bottom: 0;
+    content: '';
+    display: block;
+    left: 0;
+    position: absolute;
+    border-left: 18px solid transparent;
+    border-right: 18px solid transparent;
+}
+
+.mycard .fas {
+    padding: 3px;
+}
+
+/* 
+#hotels_result .mycard .header {
+    display: flex;
+    flex-direction: row;
+}
+
+#hotels_result .mycard .header .left {
+    display: flex;
+    flex-direction: column;
+} */
+
 .ui-dialog-titlebar-close {
     display: none;
 }
 
 .img-container {
     height:220px;
-    line-height:220px;
+    /* line-height:220px; */
+    padding: 0;
+    flex-basis: auto;
 }
+
 /* #hotels_result .btn{
     position: absolute;
     bottom: 15px;
@@ -156,13 +273,13 @@ input.form-control[readonly] {
 }
 
 #hotels_result .row {
-    margin:0;
+    margin:0 0 10px 0;
     width:100%;
 }
 
 #loadBtnContainer {
-    margin-top:30px;
-    margin-bottom: 30px;
+    margin-top:50px!important;
+    margin-bottom: 50px!important;
 }
 
 @media(max-width: 960px) {
@@ -171,6 +288,21 @@ input.form-control[readonly] {
         top: 10px;
         margin:auto;
     } */
+
+    .mycard {
+        flex-direction: column!important;
+    }
+
+    .mycard .rating-flag {
+        padding:5px;
+    }
+
+    #hotels_result .mycard .card-img-top {
+        border-bottom-left-radius: inherit;
+        border-top-right-radius: calc(.25rem - 1px);
+        border-top-left-radius: calc(.25rem - 1px);
+        object-fit: cover;
+    }
 
     .search-panel #rooms {
         flex-basis: calc(100% - 30px);
