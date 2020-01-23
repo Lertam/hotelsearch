@@ -110,7 +110,21 @@ export const getIcon = serp => {
     }
 }
 
-export const mapMeal = (meal_slug) => {
+export const mapMeal = (meal_slug, simple = false) => {
+    // if(simple) {
+    //     switch(meal_slug) {
+    //         case 'nomeal':
+    //             return 'Питание не вкл.';
+    //         case 'half-board':
+    //             return 'Завтрак и ужин';
+    //         case 'full-board':
+    //             return 'Завтрак, обед и ужин';
+    //         case 'allinclusive':
+    //             return 'Все включено';
+    //         default:
+    //             return 'Завтрак вкл.';
+    //     }
+    // }
     let meal_title = meal_slug;
     meals.forEach((meal) => {
         if(meal.slug == meal_slug) {meal_title = meal.title; return 's';}

@@ -43,9 +43,9 @@ if($mode == 'api') {
             }
             $response = $api->getMulticomplete($query);
             $json_response = json_encode($response);
-            if($response['debug']['status'] == 200) {
-                file_put_contents($file, $json_response);
-            }
+            // if($response['debug']['status'] == 200) {
+            //     file_put_contents($file, $json_response);
+            // }
             echo $json_response;
             break;    
         case 'getHotels':
@@ -65,45 +65,153 @@ if($mode == 'api') {
                 }
                 $hotels = array();
                 foreach($response['result']['hotels'] as $hotel) {
-                    $min_rate = array('rate_price' => '99999999' );
+                    $min_rate = $hotel['rates'][0];
                     foreach($hotel['rates'] as $rate) {
                         if(is_numeric($rate['rate_price']) && is_numeric($min_rate['rate_price'])) {
                             if((int)$rate['rate_price'] < (int)$min_rate['rate_price']) $min_rate = $rate;
                         }
                     }
-                    $modified = $hotel;
+                    $modified = array_replace(array(), $hotel);
                     $modified['min_rate'] = $min_rate;
+                    if(isset($modified['bar_price_data']) || $modified['bar_price_data'] == null) unset($modified['bar_price_data']);
+                    if(isset($modified['available_rates']) || $modified['available_rates'] == null) unset($modified['available_rates']);
+                    if(isset($modified['rate_name_min']) || $modified['rate_name_min'] == null) unset($modified['rate_name_min']);
+                    if(isset($modified['rate_price_min']) || $modified['rate_price_min'] == null) unset($modified['rate_price_min']);
                     $hotels[] = $modified;
                 }
+                // echo json_encode($hotels); die();
                 $ids = array();
-                foreach($hotels as $ind => $hotel) {
-                    $file = API::getStaticFilename($hotel['id']);
-                    if(!file_exists($file)) $ids[$hotel['id']] = array('ind' => $ind, 'id' => $hotel['id']);
-                    else if (filectime($file) + $expire < time()) {
-                        unlink($file);
-                        $ids[$hotel['id']] = array('ind' => $ind, 'id' => $hotel['id']);
-                    } else { //if (file_exists($file)) {
-                        $hotels[$ind] = array_merge($hotels[$ind], json_decode(file_get_contents($file), true));
-                    }
+                // foreach($hotels as $ind => $hotel) {
+                for($i = 0; $i < count($hotels); $i++) { //count($hotels)
+                    $file = API::getStaticFilename($hotels[$i]['id']);
+                    $ids[$hotels[$i]['id']] = array('ind' => $i, 'id' => $hotels[$i]['id']);
+                    // if(!file_exists($file)) $ids[$hotels[$i]['id']] = array('ind' => $i, 'id' => $hotels[$i]['id']);
+                    // else if (filectime($file) + $expire < time()) {
+                    //     unlink($file);
+                    //     $ids[$hotels[$i]['id']] = array('ind' => $i, 'id' => $hotels[$i]['id']);
+                    // } else { //if (file_exists($file)) {
+                    //     $hotels[$i] = array_merge($hotels[$i], json_decode(file_get_contents($file), true));
+                    // }
                 }
                 $info = $api->getInfo(array_column($ids, 'id'));
                 if(count($ids) > 0 && count($ids) <= 100 && $info['debug']['status'] == 200) {
                     foreach($info['result'] as $id => $hotelInfo) {
-                        $modified = $hotelInfo;
+                        $modified = array_merge($hotelInfo, $hotels[$ids[$hotelInfo['id']]['ind']]);
                         $modified['stars'] = round($hotelInfo['star_rating'] / 10);
+                        $modified['has_other_rates'] = false;
+                        $modified['has_rates_with_meal'] = false;
+                        $modified['has_free_cancellation'] = false;
+                        $modified['meals'] = array();
+                        $modified['payments'] = array();
+                        $needToBreak = 3;
+                        if(!array_key_exists('sort_score', $modified)) $modified['sort_score'] = 0;
+                        foreach($modified['rates'] as $rate) {
+                            $modified['meals'][] = $rate['meal'];
+                            if($rate['availability_hash'] != $modified['min_rate']['availability_hash']) {
+                                $modified['has_other_rates'] = true;
+                                // $needToBreak--;
+                            }
+                            if($rate['meal'] !== 'nomeal') {
+                                $modified['has_rates_with_meal'] = true;
+                                // $needToBreak--;
+                            }
+                            if($rate['cancellation_info']['free_cancellation_before'] !== null) {
+                                $modified['has_free_cancellation'] = true;
+                                $modified['payments'][] = 'has_free_cancellation';
+                                $needToBreak--;
+                            }
+                            if($rate['payment_options']['payment_types'][0]['is_need_credit_card_data'] == false) {
+                                $modified['payments'][] = 'no_card';
+                            }
+                            if($rate['payment_options']['payment_types'][0]['type'] == 'hotel') {
+                                $modified['payments'][] = 'payment_hotel';
+                            }
+                            if($rate['payment_options']['payment_types'][0]['type'] == 'now') {
+                                $modified['payments'][] = 'payment_now';
+                            }
+                        }
+                        $modified['meals'] = array_unique($modified['meals']);
+                        $modified['payments'] = array_unique($modified['payments']);
+                        $modified['min_rate']['name_struct'] = null;
+                        foreach($modified['room_groups'] as $group) {
+                            if($group['room_group_id'] == $modified['min_rate']['room_group_id']) $modified['min_rate']['name_struct'] = $group['name_struct'];
+                        }
+                        // unset($modified['room_groups']);
+                        // unset($modified['rates']);
+                        if(array_key_exists('region_category', $modified)) unset($modified['region_category']);
+                        if(array_key_exists('description_short', $modified)) unset($modified['description_short']);
+                        if(array_key_exists('matching', $modified)) unset($modified['matching']);
+                        if(array_key_exists('country_code', $modified)) unset($modified['country_code']);
+                        if(array_key_exists('low_rate', $modified)) unset($modified['low_rate']);
+                        if(array_key_exists('rating', $modified)) {
+                            if(array_key_exists('detailed', $modified['rating'])) unset($modified['rating']['detailed']);
+                            if(array_key_exists('review_best', $modified['rating'])) unset($modified['rating']['review_best']);
+                            if(array_key_exists('reviews_count', $modified['rating'])) unset($modified['rating']['reviews_count']);
+                        }
                         $file = API::getStaticFilename($hotelInfo['id']);
-                        $hotels[$ids[$hotelInfo['id']]['ind']] = array_merge($hotels[$ids[$hotelInfo['id']]['ind']], $modified);
-                        file_put_contents($file, json_encode($hotels[$ids[$hotelInfo['id']]['ind']]));
+                        $hotels[$ids[$hotelInfo['id']]['ind']] = $modified;
+                        // file_put_contents($file, json_encode($hotels[$ids[$hotelInfo['id']]['ind']]));
                     }
-                } else if(count($ids) > 100 && $info['debug']['status'] == 200) {
+                } else if(count($ids) > 100) {
                     foreach($info as $hotelInfo) {
-                        $modified = $hotelInfo;
+                        $modified = array_merge($hotelInfo, $hotels[$ids[$hotelInfo['id']]['ind']]);
                         $modified['stars'] = round($hotelInfo['star_rating'] / 10);
+                        $modified['has_other_rates'] = false;
+                        $modified['has_rates_with_meal'] = false;
+                        $modified['has_free_cancellation'] = false;
+                        $modified['payments'] = array();
+                        $modified['meals'] = array();
+                        $needToBreak = 3;
+                        if(!array_key_exists('sort_score', $modified)) $modified['sort_score'] = 0;
+                        foreach($modified['rates'] as $rate) {
+                            $modified['meals'][] = $rate['meal'];
+                            if($rate['availability_hash'] != $modified['min_rate']['availability_hash']) {
+                                $modified['has_other_rates'] = true;
+                                $needToBreak--;
+                            }
+                            if($rate['meal'] !== 'nomeal') {
+                                $modified['has_rates_with_meal'] = true;
+                                $needToBreak--;
+                            }
+                            if($rate['cancellation_info']['free_cancellation_before'] !== null) {
+                                $modified['has_free_cancellation'] = true;
+                                $modified['payments'][] = 'has_free_cancellation';
+                                $needToBreak--;
+                            }
+                            if($rate['payment_options']['payment_types'][0]['is_need_credit_card_data'] == false) {
+                                $modified['payments'][] = 'no_card';
+                            }
+                            if($rate['payment_options']['payment_types'][0]['type'] == 'hotel') {
+                                $modified['payments'][] = 'payment_hotel';
+                            }
+                            if($rate['payment_options']['payment_types'][0]['type'] == 'now') {
+                                $modified['payments'][] = 'payment_now';
+                            }
+                        }
+                        $modified['meals'] = array_unique($modified['meals']);
+                        $modified['payments'] = array_unique($modified['payments']);
+                        $modified['min_rate']['name_struct'] = null;
+                        foreach($modified['room_groups'] as $group) {
+                            if($group['room_group_id'] == $modified['min_rate']['room_group_id']) $modified['min_rate']['name_struct'] = $group['name_struct'];
+                        }
+                        // unset($modified['room_groups']);
+                        // unset($modified['rates']);
+                        if(array_key_exists('region_category', $modified)) unset($modified['region_category']);
+                        if(array_key_exists('description_short', $modified)) unset($modified['description_short']);
+                        if(array_key_exists('matching', $modified)) unset($modified['matching']);
+                        if(array_key_exists('country_code', $modified)) unset($modified['country_code']);
+                        if(array_key_exists('low_rate', $modified)) unset($modified['low_rate']);
+                        if(array_key_exists('rating', $modified)) {
+                            if(array_key_exists('detailed', $modified['rating'])) unset($modified['rating']['detailed']);
+                            if(array_key_exists('review_best', $modified['rating'])) unset($modified['rating']['review_best']);
+                            if(array_key_exists('reviews_count', $modified['rating'])) unset($modified['rating']['reviews_count']);
+                        }
                         $file = API::getStaticFilename($hotelInfo['id']);
-                        $hotels[$ids[$hotelInfo['id']]['ind']] = array_merge($hotels[$ids[$hotelInfo['id']]['ind']], $modified);
-                        file_put_contents($file, json_encode($hotels[$ids[$hotelInfo['id']]['ind']]));
+                        $hotels[$ids[$hotelInfo['id']]['ind']] = $modified;
+                        // file_put_contents($file, json_encode($hotels[$ids[$hotelInfo['id']]['ind']]));
                     }
                 }
+                // echo json_encode(array_slice($hotels,0,10));die();
                 usort($hotels, function($a, $b) {
                     if ($a['sort_score'] == $b['sort_score']) {
                         return 0;
@@ -127,12 +235,11 @@ if($mode == 'api') {
                     }
                 }
             }
-            if($region_info != null && isset($region_info['center'])) {
+            if((isset($_SESSION['region_info']) && $_SESSION['region_info']['id'] == $hotels[0]['region_id']) || $region_info != null && isset($region_info['center'])) {
+                $_SESSION['region_info'] = $region_info;
                 $lat = (float)$region_info['center']['latitude'];
                 $lng = (float)$region_info['center']['longitude'];
 
-                // foreach($hotels as $hotel) {
-                // for($i = 0; $i < count($hotels); $i++) {
                 foreach($hotels as $i => $hotel) {
                     $hotels[$i]['distance_from_center'] = API::findDistance(
                         $lat, $lng, // City cords
@@ -149,6 +256,9 @@ if($mode == 'api') {
             $filter = array();
             if(isset($_REQUEST['stars'])) {
                 $filter['stars'] = json_decode($_REQUEST['stars'], true);
+            }
+            if(isset($_REQUEST['payment'])) {
+                $filter['payment'] = json_decode($_REQUEST['payment'], true);
             }
             if(isset($_REQUEST['ratings'])) {
                 $filter['ratings'] = json_decode($_REQUEST['ratings'], true);
@@ -174,7 +284,6 @@ if($mode == 'api') {
                 foreach($hotels as $hotel) {
                     $filters_passed = 0;
                     $totalFilters = 0;
-                    // var_dump($hotel);die();
                     if(isset($filter['stars']) && count($filter['stars']) > 0) {
                         $totalFilters++;
                         if(in_array($hotel['stars'], $filter['stars']) || ($hotel['stars'] == 0 && in_array(1, $filter['stars']))) $filters_passed++;
@@ -182,8 +291,11 @@ if($mode == 'api') {
                     }
                     if(isset($filter['ratings']) && count($filter['ratings']) > 0) {
                         $totalFilters++;
-                        if(in_array($hotel['ratings'], $filter['ratings'])) $filters_passed++;
-                        // if(stars.indexOf(source.stars) !== -1 || (source.stars == 0 && stars.indexOf(1) !== -1)) filters_passed += 1;
+                        if(array_key_exists('total', $hotel['rating']) && in_array(floor($hotel['rating']['total']), $filter['ratings'])) $filters_passed++;
+                    }
+                    if(isset($filter['payment']) && count($filter['payment']) > 0) {
+                        $totalFilters++;
+                        if(in_array($hotel['payments'], $filter['payments'])) $filters_passed++;
                     }
                     if(isset($filter['serps']) && count($filter['serps']) > 0) {
                         $totalFilters++;
@@ -191,16 +303,15 @@ if($mode == 'api') {
                         foreach($filter['serps'] as $serp) {
                             if(in_array($serp, $hotel['serp_filters'])) $passed++;
                         }
-                        // serps.map(serp => { if(source.serps.indexOf(serp) !== -1) passed += 1;});
                         if($passed == count($filter['serps'])) $filters_passed++;
                     }
                     if(isset($filter['meals']) && count($filter['meals']) > 0) {
                         $totalFilters++;
                         $passed = 0;
-                        $hotel_meals = array();
-                        foreach($hotel['rates'] as $rate) {
-                            $hotel_meals = array_merge($hotel_meals, $rate['meal']);
-                        }
+                        $hotel_meals = $hotel['meals'];//array();
+                        // foreach($hotel['rates'] as $rate) {
+                        //     $hotel_meals = array_merge($hotel_meals, $rate['meal']);
+                        // }
                         foreach($filter['meals'] as $meal) {
                             if(in_array($meal, $hotel_meals)) $passed++;
                         }
@@ -292,14 +403,17 @@ if($mode == 'api') {
             <script defer src="https://kit.fontawesome.com/4287d8aada.js" crossorigin="anonymous"></script>
             <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
             <script defer src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.9.0/slick.min.css" integrity="sha256-UK1EiopXIL+KVhfbFa8xrmAWPeBjMVdvYMYkTAEv/HI=" crossorigin="anonymous" />
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.9.0/slick-theme.min.css" integrity="sha256-4hqlsNP9KM6+2eA8VUT0kk4RsMRTeS7QGHIM+MZ5sLY=" crossorigin="anonymous" />
+            <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.9.0/slick.min.css" integrity="sha256-UK1EiopXIL+KVhfbFa8xrmAWPeBjMVdvYMYkTAEv/HI=" crossorigin="anonymous" />
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.9.0/slick-theme.min.css" integrity="sha256-4hqlsNP9KM6+2eA8VUT0kk4RsMRTeS7QGHIM+MZ5sLY=" crossorigin="anonymous" /> -->
+            <link rel="stylesheet" href="/node_modules/owl.carousel/dist/assets/owl.carousel.min.css" />
+            <link rel="stylesheet" href="/node_modules/owl.carousel/dist/assets/owl.theme.default.css" />
         </head>
         <body>
             <div id="app"></div>
             <?php if($mode == 'finish' && isset($_REQUEST['partner_order_id']) && is_string($_REQUEST['partner_order_id'])) { ?><script type="text/javascript">window.partner_order_id = '<?php echo $_REQUEST['partner_order_id']; ?>';</script><?php } ?>
             <script async src="https://cdnjs.cloudflare.com/ajax/libs/lazysizes/5.1.2/lazysizes.min.js" integrity="sha256-Md1qLToewPeKjfAHU1zyPwOutccPAm5tahnaw7Osw0A=" crossorigin="anonymous"></script>
-            <script defer src="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.9.0/slick.min.js" integrity="sha256-NXRS8qVcmZ3dOv3LziwznUHPegFhPZ1F/4inU7uC8h0=" crossorigin="anonymous"></script>
+            <!-- <script src="/node_modules/jquery/dist/jquery.js"></script> -->
+            <script src="/node_modules/owl.carousel/dist/owl.carousel.min.js"></script>
             <script defer src="./build/bundle.js"></script>
         </body>
     </html>

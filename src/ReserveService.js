@@ -29,23 +29,6 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
         this.data.rooms.push(res);
     });
     this.availableGroups = [];
-    this.hotel.rates.map(rate => {
-        let groups = this.hotel.room_groups.filter(group => group.room_group_id === rate.room_group_id);
-        if(groups.length > 0) {
-            let group = groups[0];
-            if(this.availableGroups.filter(av => av.room_group_id === group.room_group_id).length == 0) {
-                let minPrice = 9999999;
-                this.availableGroups.push({
-                    ...group, 
-                    prices: [ ...hotel.rates.filter(rt => rt.room_group_id === group.room_group_id).map(rt=> {
-                        var price = parseInt(rt.rate_price);
-                        if(price<minPrice) minPrice = price;
-                        return price;})  ],
-                    minPrice
-                });
-            };
-        }
-    });
     this.renderTitle = () => {
         if(this.stage == -2) $('#modalReserveTitle').hide();
         else $('#modalReserveTitle').show();
@@ -574,6 +557,24 @@ export default function ReserveService(hotel={name: 'N/A'}, search_info={}){
     }).done(actResp => {
         if(actResp.result.hotels.length > 0) {
             this.hotel.rates = actResp.result.hotels[0].rates;
+            this.hotel.room_groups = actResp.result.hotels[0].room_groups;
+            this.hotel.rates.map(rate => {
+                let groups = this.hotel.room_groups.filter(group => group.room_group_id === rate.room_group_id);
+                if(groups.length > 0) {
+                    let group = groups[0];
+                    if(this.availableGroups.filter(av => av.room_group_id === group.room_group_id).length == 0) {
+                        let minPrice = 9999999;
+                        this.availableGroups.push({
+                            ...group, 
+                            prices: [ ...hotel.rates.filter(rt => rt.room_group_id === group.room_group_id).map(rt=> {
+                                var price = parseInt(rt.rate_price);
+                                if(price<minPrice) minPrice = price;
+                                return price;})  ],
+                            minPrice
+                        });
+                    };
+                }
+            });
         } else {
             this.stage = -2;
         }

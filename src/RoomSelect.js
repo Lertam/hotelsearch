@@ -8,6 +8,18 @@ export default function RoomSelect(startScope = [], genHash) {
     }];
     if(!!startScope && startScope.length > 0) this.rooms = startScope;
     this.getInfo = () => this.rooms;
+    this.getBriefInfo = () => {
+        let adults = 0;
+        let children = 0;
+        this.rooms.forEach(room => {
+            adults += room.adults;
+            children += room.children.length;
+        });
+        return {
+            rooms: this.rooms.length,
+            adults, children
+        };
+    };
     this.addAdults = ({target}) => {
         let ind = parseInt($(target).parents('.room')[0].dataset.room_id);
         this.rooms[ind].adults += 1;
